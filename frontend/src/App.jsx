@@ -33,7 +33,7 @@ const ModeratorRoute = ({ children }) => {
 function App() {
   return (
     <AuthProvider>
-      <Router>
+      <Router basename={import.meta.env.BASE_URL}>
         <Navbar />
         <main id="app-content">
           <Routes>

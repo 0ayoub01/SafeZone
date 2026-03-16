@@ -3,9 +3,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
-  onAuthStateChanged,
-  GithubAuthProvider,
-  signInWithPopup
+  onAuthStateChanged
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
@@ -22,15 +20,13 @@ export const AuthProvider = ({ children }) => {
   const signup = (email, password) =>
     createUserWithEmailAndPassword(auth, email, password);
 
-  const login = (email, password) =>
-    signInWithEmailAndPassword(auth, email, password);
-
-  const loginWithGithub = () => {
-    const provider = new GithubAuthProvider();
-    return signInWithPopup(auth, provider);
+  const login = (email, password) => {
+    return signInWithEmailAndPassword(auth, email, password);
   };
 
-  const logout = () => signOut(auth);
+  const logout = () => {
+    return signOut(auth);
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
