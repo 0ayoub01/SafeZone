@@ -3,7 +3,9 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  GithubAuthProvider,
+  signInWithPopup
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
@@ -22,6 +24,11 @@ export const AuthProvider = ({ children }) => {
 
   const login = (email, password) => {
     return signInWithEmailAndPassword(auth, email, password);
+  };
+
+  const loginWithGithub = () => {
+    const provider = new GithubAuthProvider();
+    return signInWithPopup(auth, provider);
   };
 
   const logout = () => {
