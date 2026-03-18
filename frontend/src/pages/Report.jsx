@@ -1,8 +1,58 @@
-import { useState } from 'react';
+import { useState, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../firebase';
 import { useAuth } from '../context/AuthContext';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { 
+  Camera, 
+  MapPin, 
+  CheckCircle2, 
+  ChevronRight, 
+  ChevronLeft, 
+  Upload, 
+  X, 
+  AlertCircle,
+  Loader2,
+  Navigation
+} from 'lucide-react';
+
+// Fix for default marker icon
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+let DefaultIcon = L.icon({
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
+});
+
+const LocationMarker = ({ position, setPosition }) => {
+  const map = useMapEvents({
+    click(e) {
+      setPosition(e.latlng);
+      map.flyTo(e.latlng, map.getZoom());
+    },
+  });
+
+  return position === null ? null : (
+    <Marker 
+      position={position} 
+      icon={DefaultIcon} 
+      draggable={true}
+      eventHandlers={{
+        dragend: (e) => {
+          setPosition(e.target.getLatLng());
+        }
+      }}
+    />
+  );
+};
 
 const Report = () => {
   const navigate = useNavigate();
@@ -14,9 +64,10 @@ const Report = () => {
     city: '',
     neighborhood: '',
     description: '',
-    lat: '',
-    lng: ''
+    location: { lat: 36.8065, lng: 10.1815 } // Default to Tunis
   });
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -55,303 +106,397 @@ const Report = () => {
     "Zaghouan": ["Zaghouan Ville", "Bir Mcherga", "El Fahs", "Nadhour", "Zriba", "Saouaf"]
   };
 
-  const tunisCities = [
-    "Ariana", "Béja", "Ben Arous", "Bizerte", "Gabès", "Gafsa", "Jendouba", 
-    "Kairouan", "Kasserine", "Kébili", "Kef", "Mahdia", "Manouba", "Médenine", 
-    "Monastir", "Nabeul", "Sfax", "Sidi Bouzid", "Siliana", "Sousse", 
-    "Tataouine", "Tozeur", "Tunis", "Zaghouan"
-  ];
+  const tunisCities = Object.keys(neighborhoodsByCity).sort();
 
-  const [manualNeighborhood, setManualNeighborhood] = useState(false);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-    
-    // Reset neighborhood if city changes and it's not in manual mode
-    if (name === 'city') {
-      setFormData(prev => ({ ...prev, neighborhood: '' }));
-      setManualNeighborhood(false);
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Image size should be less than 5MB');
+        return;
+      }
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result);
+      reader.readAsDataURL(file);
     }
   };
 
-  const handleCategorySelect = (categoryId) => {
-    setFormData({ ...formData, category: categoryId });
-    setStep(2);
+  const handleLocationChange = (latlng) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      location: { lat: latlng.lat, lng: latlng.lng } 
+    }));
+  };
+
+  const getUserLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((position) => {
+        handleLocationChange({ 
+          lat: position.coords.latitude, 
+          lng: position.coords.longitude 
+        });
+      }, (err) => {
+        console.error(err);
+        setError('Could not get your current location.');
+      });
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!currentUser) {
+      setError('You must be logged in to submit a report.');
+      return;
+    }
+    
     setSubmitting(true);
     setError('');
 
-    const payload = {
-      ...formData,
-      location: {
-        lat: parseFloat(formData.lat) || 36.8065,
-        lng: parseFloat(formData.lng) || 10.1815
-      }
-    };
-
     try {
+      let imageUrl = '';
+      if (imageFile) {
+        const storageRef = ref(storage, `reports/${Date.now()}_${imageFile.name}`);
+        const uploadTask = await uploadBytes(storageRef, imageFile);
+        imageUrl = await getDownloadURL(uploadTask.ref);
+      }
+
       await addDoc(collection(db, 'reports'), {
-        ...payload,
+        ...formData,
+        imageUrl,
         status: 'Reported',
         createdAt: serverTimestamp(),
         userId: currentUser.uid,
-        userEmail: currentUser.email
+        userEmail: currentUser.email,
+        upvotes: [],
+        commentCount: 0
       });
+
       navigate('/browse');
     } catch (err) {
       console.error(err);
-      setError('An error occurred while submitting the report.');
+      setError('An error occurred while submitting the report. Please try again.');
       setSubmitting(false);
     }
   };
 
-  const renderProgress = () => (
-    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '2rem', gap: '0.5rem' }}>
-      {[1, 2, 3].map((s) => (
-        <div 
-          key={s} 
-          style={{ 
-            width: '40px', 
-            height: '8px', 
-            borderRadius: '4px', 
-            backgroundColor: step >= s ? 'var(--clr-primary)' : '#e0e0e0',
-            transition: 'background-color 0.3s ease'
-          }} 
-        />
-      ))}
-    </div>
-  );
+  const nextStep = () => {
+    if (step === 1 && !formData.category) return;
+    if (step === 2 && (!formData.city || !formData.neighborhood)) return;
+    setStep(prev => prev + 1);
+  };
+
+  const prevStep = () => setStep(prev => prev - 1);
+
+  const stepVariants = {
+    hidden: { opacity: 0, x: 20 },
+    visible: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: -20 }
+  };
 
   return (
-    <div className="view container" style={{ maxWidth: '800px' }}>
-      <header style={{ textAlign: 'center', marginBottom: '2rem' }}>
-        <h2 style={{ fontSize: '2.5rem', color: 'var(--clr-text)' }}>Report an Issue</h2>
-        <p style={{ color: 'var(--clr-text-light)' }}>Help us make Tunisia better, one report at a time.</p>
-      </header>
+    <div className="view">
+      <div className="container" style={{ maxWidth: '800px' }}>
+        <header style={{ textAlign: 'center', marginBottom: '3rem' }}>
+          <h2 className="section-title">Report an Issue</h2>
+          <p className="section-subtitle">Help us improve Tunisia by reporting infrastructure or safety concerns in your area.</p>
+        </header>
 
-      {renderProgress()}
-
-      {error && (
-        <div style={{ 
-          color: 'white', 
-          backgroundColor: 'var(--clr-primary)', 
-          padding: '1rem', 
-          borderRadius: 'var(--radius-md)', 
-          marginBottom: '1.5rem',
-          textAlign: 'center'
-        }}>
-          {error}
-        </div>
-      )}
-
-      <div style={{ 
-        background: 'var(--clr-white)', 
-        padding: '2.5rem', 
-        borderRadius: 'var(--radius-lg)', 
-        boxShadow: 'var(--shadow-md)',
-        minHeight: '400px',
-        display: 'flex',
-        flexDirection: 'column'
-      }}>
-        
-        {/* STEP 1: CATEGORY */}
-        {step === 1 && (
-          <div style={{ animation: 'fadeIn 0.4s ease' }}>
-            <h3 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>What's the problem about?</h3>
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', 
-              gap: '1.5rem' 
-            }}>
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => handleCategorySelect(cat.id)}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '1rem',
-                    padding: '2rem 1rem',
-                    borderRadius: 'var(--radius-md)',
-                    border: '2px solid var(--clr-border)',
-                    backgroundColor: 'white',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    transform: formData.category === cat.id ? 'scale(1.05)' : 'none',
-                    borderColor: formData.category === cat.id ? 'var(--clr-primary)' : 'var(--clr-border)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--clr-primary)';
-                    e.currentTarget.style.backgroundColor = 'rgba(231, 0, 19, 0.05)';
-                  }}
-                  onMouseLeave={(e) => {
-                    if (formData.category !== cat.id) {
-                      e.currentTarget.style.borderColor = 'var(--clr-border)';
-                      e.currentTarget.style.backgroundColor = 'white';
-                    }
-                  }}
-                >
-                  <span style={{ fontSize: '3rem' }}>{cat.icon}</span>
-                  <span style={{ fontWeight: '600', color: 'var(--clr-text)' }}>{cat.label}</span>
-                </button>
-              ))}
+        {/* Custom Progress Stepper */}
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '3rem', gap: '0.5rem' }}>
+          {[1, 2, 3, 4].map(s => (
+            <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ 
+                width: '32px', 
+                height: '32px', 
+                borderRadius: '50%', 
+                backgroundColor: step >= s ? 'var(--clr-primary)' : 'var(--clr-bg-raised)',
+                color: step >= s ? 'white' : 'var(--clr-text-muted)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.8rem',
+                fontWeight: 800,
+                transition: 'var(--trans-md)',
+                boxShadow: step === s ? '0 0 0 4px var(--clr-primary-glow)' : 'none'
+              }}>
+                {step > s ? <CheckCircle2 size={16} /> : s}
+              </div>
+              {s < 4 && (
+                <div style={{ 
+                  width: '40px', 
+                  height: '3px', 
+                  backgroundColor: step > s ? 'var(--clr-primary)' : 'var(--clr-border)',
+                  borderRadius: 'var(--r-full)',
+                  transition: 'var(--trans-md)'
+                }} />
+              )}
             </div>
+          ))}
+        </div>
+
+        {error && (
+          <div className="alert alert-error" style={{ marginBottom: '2rem' }}>
+            <AlertCircle size={20} />
+            <span>{error}</span>
           </div>
         )}
 
-        {/* STEP 2: LOCATION */}
-        {step === 2 && (
-          <div style={{ animation: 'fadeIn 0.4s ease' }}>
-            <h3 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Where is it located?</h3>
-            
-            <div className="form-group">
-              <label className="form-label">City</label>
-              <select 
-                name="city" 
-                className="form-control" 
-                value={formData.city} 
-                onChange={handleChange}
+        <div className="card-premium" style={{ padding: '3rem', minHeight: '500px', display: 'flex', flexDirection: 'column' }}>
+          <AnimatePresence mode="wait">
+            {/* STEP 1: CATEGORY */}
+            {step === 1 && (
+              <motion.div 
+                key="step1"
+                variants={stepVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
               >
-                <option value="">Select a City</option>
-                {tunisCities.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-
-            {formData.city && (
-              <div className="form-group" style={{ animation: 'fadeIn 0.3s ease' }}>
-                <label className="form-label">Neighborhood / Area</label>
-                {!manualNeighborhood && neighborhoodsByCity[formData.city] ? (
-                  <select
-                    name="neighborhood"
-                    className="form-control"
-                    value={formData.neighborhood}
-                    onChange={(e) => {
-                      if (e.target.value === "other_manual") {
-                        setManualNeighborhood(true);
-                        setFormData({ ...formData, neighborhood: '' });
-                      } else {
-                        handleChange(e);
-                      }
-                    }}
-                  >
-                    <option value="">Select a Neighborhood</option>
-                    {neighborhoodsByCity[formData.city].map(n => (
-                      <option key={n} value={n}>{n}</option>
-                    ))}
-                    <option value="other_manual">+ Other / Enter Manually</option>
-                  </select>
-                ) : (
-                  <div style={{ position: 'relative' }}>
-                    <input 
-                      type="text" 
-                      name="neighborhood" 
-                      className="form-control" 
-                      placeholder="Enter neighborhood or street name" 
-                      value={formData.neighborhood} 
-                      onChange={handleChange}
-                    />
-                    {neighborhoodsByCity[formData.city] && (
-                      <button 
-                        type="button"
-                        onClick={() => setManualNeighborhood(false)}
-                        style={{ 
-                          position: 'absolute', 
-                          right: '10px', 
-                          top: '50%', 
-                          transform: 'translateY(-50%)',
-                          background: 'none',
-                          border: 'none',
-                          color: 'var(--clr-primary)',
-                          fontSize: '0.8rem',
-                          cursor: 'pointer',
-                          fontWeight: '600'
-                        }}
-                      >
-                        Back to list
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
+                <h3 style={{ textAlign: 'center', marginBottom: '2rem' }}>What kind of issue are you reporting?</h3>
+                <div className="grid-3" style={{ gap: '1.5rem' }}>
+                  {categories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => {
+                        setFormData({ ...formData, category: cat.id });
+                        nextStep();
+                      }}
+                      className={`card ${formData.category === cat.id ? 'active' : ''}`}
+                      style={{
+                        padding: '2.5rem 1.5rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '1.25rem',
+                        cursor: 'pointer',
+                        borderColor: formData.category === cat.id ? 'var(--clr-primary)' : 'var(--clr-border)',
+                        backgroundColor: formData.category === cat.id ? 'var(--clr-primary-ultra)' : 'var(--clr-surface)',
+                        transition: 'var(--trans-sm)'
+                      }}
+                    >
+                      <span style={{ fontSize: '3rem' }}>{cat.icon}</span>
+                      <span style={{ fontWeight: 700, fontSize: '1rem' }}>{cat.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
             )}
 
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
-              <button 
-                onClick={() => setStep(1)} 
-                className="btn btn-outline" 
-                style={{ flex: 1 }}
+            {/* STEP 2: LOCATION */}
+            {step === 2 && (
+              <motion.div 
+                key="step2"
+                variants={stepVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
               >
-                Back
-              </button>
-              <button 
-                onClick={() => setStep(3)} 
-                disabled={!formData.city || !formData.neighborhood}
-                className="btn btn-primary" 
-                style={{ flex: 2 }}
+                <h3 style={{ textAlign: 'center', marginBottom: '2rem' }}>Where is it located?</h3>
+                
+                <div className="grid-2">
+                  <div className="form-group">
+                    <label className="form-label">City / Governorate</label>
+                    <select 
+                      className="form-control"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value, neighborhood: '' })}
+                    >
+                      <option value="">Select City</option>
+                      {tunisCities.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Neighborhood / Area</label>
+                    <select 
+                      className="form-control"
+                      value={formData.neighborhood}
+                      disabled={!formData.city}
+                      onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
+                    >
+                      <option value="">Select Neighborhood</option>
+                      {formData.city && neighborhoodsByCity[formData.city]?.map(n => (
+                        <option key={n} value={n}>{n}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Pin precise location on map (Optional)</span>
+                  <button 
+                    type="button"
+                    onClick={getUserLocation}
+                    className="btn btn-ghost btn-sm"
+                    style={{ color: 'var(--clr-primary)', gap: '0.4rem' }}
+                  >
+                    <Navigation size={14} /> Use My Location
+                  </button>
+                </div>
+                
+                <div style={{ height: '300px', width: '100%', borderRadius: 'var(--r-lg)', overflow: 'hidden', border: '1.5px solid var(--clr-border)', marginBottom: '2rem' }}>
+                  <MapContainer center={[formData.location.lat, formData.location.lng]} zoom={13} style={{ height: '100%', width: '100%' }}>
+                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                    <LocationMarker position={formData.location} setPosition={handleLocationChange} />
+                  </MapContainer>
+                </div>
+
+                <div style={{ display: 'flex', gap: '1rem', marginTop: 'auto' }}>
+                  <button onClick={prevStep} className="btn btn-outline" style={{ flex: 1 }}>
+                    <ChevronLeft size={18} /> Back
+                  </button>
+                  <button 
+                    onClick={nextStep} 
+                    disabled={!formData.city || !formData.neighborhood}
+                    className="btn btn-primary" 
+                    style={{ flex: 1.5 }}
+                  >
+                    Next: Add Evidence <ChevronRight size={18} />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* STEP 3: EVIDENCE */}
+            {step === 3 && (
+              <motion.div 
+                key="step3"
+                variants={stepVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                style={{ textAlign: 'center' }}
               >
-                Next Step
-              </button>
-            </div>
-          </div>
-        )}
+                <h3 style={{ marginBottom: '1rem' }}>Attach Photo Evidence</h3>
+                <p style={{ color: 'var(--clr-text-light)', marginBottom: '2.5rem' }}>
+                  Adding a photo helps authorities understand the severity and location of the issue faster.
+                </p>
 
-        {/* STEP 3: DETAILS */}
-        {step === 3 && (
-          <form onSubmit={handleSubmit} style={{ animation: 'fadeIn 0.4s ease' }}>
-            <h3 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Final Details</h3>
+                {!imagePreview ? (
+                  <label className="photo-upload-zone">
+                    <input type="file" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                      <div style={{ 
+                        width: '64px', 
+                        height: '64px', 
+                        borderRadius: '50%', 
+                        backgroundColor: 'var(--clr-primary-ultra)', 
+                        color: 'var(--clr-primary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <Upload size={32} />
+                      </div>
+                      <div>
+                        <p style={{ fontWeight: 700, color: 'var(--clr-text)' }}>Click to upload or take a photo</p>
+                        <p style={{ fontSize: '0.85rem' }}>PNG, JPG or JPEG (Max 5MB)</p>
+                      </div>
+                    </div>
+                  </label>
+                ) : (
+                  <div style={{ position: 'relative', maxWidth: '400px', margin: '0 auto' }}>
+                    <img 
+                      src={imagePreview} 
+                      alt="Preview" 
+                      style={{ width: '100%', borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-md)', maxHeight: '300px', objectFit: 'cover' }} 
+                    />
+                    <button 
+                      onClick={() => { setImageFile(null); setImagePreview(null); }}
+                      style={{ 
+                        position: 'absolute', 
+                        top: '-10px', 
+                        right: '-10px', 
+                        backgroundColor: 'var(--clr-error)', 
+                        color: 'white', 
+                        border: 'none', 
+                        borderRadius: '50%', 
+                        width: '32px', 
+                        height: '32px', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        boxShadow: 'var(--shadow-md)'
+                      }}
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                )}
 
-            <div className="form-group">
-              <label className="form-label">Title</label>
-              <input 
-                type="text" 
-                name="title" 
-                className="form-control" 
-                placeholder="A short descriptive title" 
-                value={formData.title} 
-                onChange={handleChange}
-                required
-              />
-            </div>
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '3rem' }}>
+                  <button onClick={prevStep} className="btn btn-outline" style={{ flex: 1 }}>
+                    <ChevronLeft size={18} /> Back
+                  </button>
+                  <button onClick={nextStep} className="btn btn-primary" style={{ flex: 1.5 }}>
+                    {imageFile ? 'Looks Good' : 'Skip & Continue'} <ChevronRight size={18} />
+                  </button>
+                </div>
+              </motion.div>
+            )}
 
-            <div className="form-group">
-              <label className="form-label">Description</label>
-              <textarea 
-                name="description" 
-                className="form-control" 
-                placeholder="Give us more details about the issue..." 
-                value={formData.description} 
-                onChange={handleChange}
-                required
-                style={{ minHeight: '150px', resize: 'vertical' }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
-              <button 
-                type="button"
-                onClick={() => setStep(2)} 
-                className="btn btn-outline" 
-                style={{ flex: 1 }}
+            {/* STEP 4: DETAILS */}
+            {step === 4 && (
+              <motion.div 
+                key="step4"
+                variants={stepVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
               >
-                Back
-              </button>
-              <button 
-                type="submit" 
-                className="btn btn-primary" 
-                style={{ flex: 2 }}
-                disabled={submitting}
-              >
-                {submitting ? 'Submitting...' : 'Submit Report'}
-              </button>
-            </div>
-          </form>
-        )}
+                <h3 style={{ textAlign: 'center', marginBottom: '2rem' }}>Final Details</h3>
+                
+                <div className="form-group">
+                  <label className="form-label">Issue Title</label>
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    placeholder="Briefly describe the problem (e.g. Large Pothole on main road)"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    required
+                  />
+                </div>
 
+                <div className="form-group">
+                  <label className="form-label">Detailed Description</label>
+                  <textarea 
+                    className="form-control" 
+                    rows="6"
+                    placeholder="Provide more details to help us identify the exact problem..."
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    required
+                    style={{ resize: 'vertical' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+                  <button onClick={prevStep} className="btn btn-outline" style={{ flex: 1 }}>
+                    <ChevronLeft size={18} /> Back
+                  </button>
+                  <button 
+                    onClick={handleSubmit} 
+                    disabled={submitting || !formData.title || !formData.description}
+                    className="btn btn-primary" 
+                    style={{ flex: 2 }}
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="spinner" size={18} /> Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 size={18} /> Submit Official Report
+                      </>
+                    )}
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   );
