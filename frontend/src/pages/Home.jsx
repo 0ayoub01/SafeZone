@@ -10,6 +10,7 @@ import {
   BarChart3,
   MessageSquare
 } from 'lucide-react';
+import bgCity from '../assets/bg-city.png';
 
 const Home = () => {
   const { t } = useTranslation();
@@ -64,7 +65,21 @@ const Home = () => {
   return (
     <div className="view">
       {/* Hero Section */}
-      <section className="container" style={{ paddingBottom: '6rem' }}>
+      <section 
+        className="container" 
+        style={{ 
+          paddingBottom: '6rem',
+          paddingTop: '4rem',
+          position: 'relative',
+          backgroundImage: `linear-gradient(rgba(var(--h-navy), 47%, 11%, 0.75), rgba(var(--h-navy), 47%, 11%, 0.85)), url(${bgCity})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          borderRadius: 'var(--r-2xl)',
+          marginTop: '1rem',
+          overflow: 'hidden',
+          boxShadow: 'var(--shadow-lg)'
+        }}
+      >
         <motion.div 
           variants={containerVariants}
           initial="hidden"
@@ -75,10 +90,13 @@ const Home = () => {
             alignItems: 'center', 
             textAlign: 'center', 
             maxWidth: '1000px',
-            margin: '0 auto'
+            margin: '0 auto',
+            position: 'relative',
+            zIndex: 2,
+            color: 'white'
           }}
         >
-          <motion.div variants={itemVariants} className="section-label">
+          <motion.div variants={itemVariants} className="section-label" style={{ background: 'rgba(255,255,255,0.1)', color: 'white', borderColor: 'rgba(255,255,255,0.2)' }}>
             🇹🇳 Empowering Tunisian Citizens
           </motion.div>
           
@@ -89,18 +107,19 @@ const Home = () => {
               lineHeight: '1.05', 
               marginBottom: '1.5rem',
               fontWeight: 900,
-              letterSpacing: '-0.04em'
+              letterSpacing: '-0.04em',
+              color: 'white'
             }}
           >
             {t('hero.title')} <br/>
-            <span className="text-gradient">{t('hero.titleAccent')}</span>
+            <span className="text-gradient-white">{t('hero.titleAccent')}</span>
           </motion.h1>
           
           <motion.p 
             variants={itemVariants}
             style={{ 
               fontSize: '1.2rem', 
-              color: 'var(--clr-text-light)', 
+              color: 'rgba(255,255,255,0.8)', 
               maxWidth: '650px', 
               marginBottom: '3rem',
               lineHeight: '1.7'
@@ -117,7 +136,7 @@ const Home = () => {
               {t('hero.ctaStart')}
               <ArrowRight size={18} />
             </Link>
-            <Link to="/map" className="btn btn-outline btn-lg">
+            <Link to="/map" className="btn btn-outline btn-lg" style={{ color: 'white', borderColor: 'rgba(255,255,255,0.3)' }}>
               {t('hero.ctaBrowse')}
             </Link>
           </motion.div>
