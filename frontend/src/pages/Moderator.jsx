@@ -1,8 +1,13 @@
 import { useState, useEffect } from 'react';
 import { collection, getDocs, doc, updateDoc, deleteDoc, orderBy, query } from 'firebase/firestore';
 import { db } from '../firebase';
+import { useTranslation } from 'react-i18next';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Clock, MapPin, Trash2, ShieldAlert } from 'lucide-react';
+import CustomSelect from '../components/CustomSelect';
 
 const Moderator = () => {
+  const { t } = useTranslation();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -33,7 +38,7 @@ const Moderator = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this report permanently?')) {
+    if (window.confirm(t('mod.confirmDel') || 'Are you sure you want to delete this report permanently?')) {
       try {
         await deleteDoc(doc(db, 'reports', id));
         setReports(reports.filter(r => r.id !== id));
@@ -56,17 +61,17 @@ const Moderator = () => {
     <div className="view container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '3rem' }}>
         <div>
-          <h2 style={{ fontSize: '2.4rem', marginBottom: '0.5rem' }}>Community Moderation</h2>
-          <p style={{ color: 'var(--clr-text-muted)' }}>Monitor and resolve community issues efficiently.</p>
+          <h2 style={{ fontSize: '2.4rem', marginBottom: '0.5rem' }}>{t('mod.title')}</h2>
+          <p style={{ color: 'var(--clr-text-muted)' }}>{t('mod.subtitle')}</p>
         </div>
         <div className="card-premium" style={{ padding: '0.8rem 1.5rem', display: 'flex', gap: '2rem' }}>
           <div>
-            <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--clr-text-muted)', textTransform: 'uppercase' }}>Total Issues</div>
+            <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--clr-text-muted)', textTransform: 'uppercase' }}>{t('mod.totalIssues')}</div>
             <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{reports.length}</div>
           </div>
           <div style={{ width: '1px', backgroundColor: 'var(--clr-border)' }}></div>
           <div>
-            <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--clr-text-muted)', textTransform: 'uppercase' }}>Pending</div>
+            <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--clr-text-muted)', textTransform: 'uppercase' }}>{t('mod.pending')}</div>
             <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--clr-warning)' }}>
               {reports.filter(r => r.status === 'Reported').length}
             </div>
@@ -79,73 +84,92 @@ const Moderator = () => {
           <div style={{ width: '40px', height: '40px', border: '4px solid #eee', borderTopColor: 'var(--clr-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto' }} />
         </div>
       ) : (
-        <div className="card-premium" style={{ padding: '0', overflow: 'hidden' }}>
+        <>
           {reports.length === 0 ? (
-            <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--clr-text-muted)' }}>
-              <p>No reports in the system.</p>
+            <div className="card-premium" style={{ padding: '4rem', textAlign: 'center', color: 'var(--clr-text-muted)' }}>
+              <p>{t('mod.noReports')}</p>
             </div>
           ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-              <thead style={{ backgroundColor: 'rgba(0,0,0,0.02)', borderBottom: '1px solid var(--clr-border)' }}>
-                <tr>
-                  <th style={{ padding: '1.2rem 2rem', fontSize: '0.8rem', fontWeight: 800, color: 'var(--clr-text-muted)', textTransform: 'uppercase' }}>Issue Details</th>
-                  <th style={{ padding: '1.2rem 2rem', fontSize: '0.8rem', fontWeight: 800, color: 'var(--clr-text-muted)', textTransform: 'uppercase' }}>Location</th>
-                  <th style={{ padding: '1.2rem 2rem', fontSize: '0.8rem', fontWeight: 800, color: 'var(--clr-text-muted)', textTransform: 'uppercase' }}>Status</th>
-                  <th style={{ padding: '1.2rem 2rem', fontSize: '0.8rem', fontWeight: 800, color: 'var(--clr-text-muted)', textTransform: 'uppercase' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reports.map((report, idx) => (
-                  <tr key={report.id} style={{ borderBottom: idx === reports.length - 1 ? 'none' : '1px solid var(--clr-border)', transition: 'background 0.2s' }}>
-                    <td style={{ padding: '1.5rem 2rem' }}>
-                      <div style={{ fontWeight: 700, marginBottom: '0.2rem' }}>{report.title}</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--clr-text-muted)' }}>
-                        {report.createdAt?.toDate ? report.createdAt.toDate().toLocaleDateString() : 'Just now'} &bull; {report.category}
+            <motion.div layout style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <AnimatePresence>
+                {reports.map((report) => {
+                  const statusColor = getStatusColor(report.status);
+                  return (
+                   <motion.div 
+                    key={report.id}
+                    layout
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="card-premium"
+                    style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}
+                   >
+                    <div style={{ width: '50px', height: '50px', borderRadius: '16px', background: `${statusColor}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <ShieldAlert size={24} color={statusColor} />
+                    </div>
+                    
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
+                        <span className="badge" style={{ backgroundColor: `${statusColor}15`, color: statusColor, padding: '0.2rem 0.6rem', fontSize: '0.7rem' }}>
+                          {report.status}
+                        </span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--clr-primary)', textTransform: 'uppercase' }}>
+                          {t(`category.${report.category}`)}
+                        </span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--clr-text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem', marginLeft: 'auto' }}>
+                          <Clock size={12} /> {report.createdAt?.toDate ? report.createdAt.toDate().toLocaleDateString() : 'Just now'}
+                        </span>
                       </div>
-                    </td>
-                    <td style={{ padding: '1.5rem 2rem', fontSize: '0.9rem' }}>
-                      {report.city}<br/>
-                      <span style={{ color: 'var(--clr-text-muted)', fontSize: '0.8rem' }}>{report.neighborhood}</span>
-                    </td>
-                    <td style={{ padding: '1.5rem 2rem' }}>
-                      <select 
-                        className="form-control" 
-                        style={{ 
-                          width: 'auto', 
-                          padding: '0.5rem 1rem', 
-                          fontSize: '0.85rem', 
-                          fontWeight: 700,
-                          backgroundColor: 'rgba(0,0,0,0.03)',
-                          border: 'none',
-                          color: getStatusColor(report.status)
-                        }}
-                        value={report.status}
-                        onChange={(e) => handleStatusChange(report.id, e.target.value)}
-                      >
-                        <option value="Reported">🔴 Reported</option>
-                        <option value="In Progress">🟡 In Progress</option>
-                        <option value="Resolved">🟢 Resolved</option>
-                      </select>
-                    </td>
-                    <td style={{ padding: '1.5rem 2rem' }}>
+                      
+                      <h4 style={{ fontSize: '1.15rem', marginBottom: '0.5rem', lineHeight: '1.3', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {report.title}
+                      </h4>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', color: 'var(--clr-text-muted)', fontSize: '0.85rem' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}><MapPin size={14} /> {report.city}, {report.neighborhood}</span>
+                      </div>
+                    </div>
+
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      borderLeft: '1px solid var(--clr-border)',
+                      paddingLeft: '1.5rem',
+                      marginLeft: '0.5rem',
+                      flexShrink: 0
+                    }}>
+                      <div style={{ minWidth: '160px' }}>
+                        <CustomSelect 
+                          value={report.status}
+                          onChange={(val) => handleStatusChange(report.id, val)}
+                          options={[
+                            { value: 'Reported', label: `🔴 ${t('browse.statusReported') || 'Reported'}` },
+                            { value: 'In Progress', label: `🟡 ${t('browse.statusActive') || 'In Progress'}` },
+                            { value: 'Resolved', label: `🟢 ${t('browse.statusSolved') || 'Resolved'}` }
+                          ]}
+                          style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', fontWeight: 700, backgroundColor: 'var(--clr-surface)', border: '1px solid var(--clr-border)' }}
+                        />
+                      </div>
                       <button 
                         className="btn" 
-                        style={{ padding: '0.5rem 1rem', fontSize: '0.8rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--clr-error)' }}
+                        style={{ padding: '0.6rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--clr-error)', border: 'none', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         onClick={() => handleDelete(report.id)}
+                        title={t('mod.delete')}
                       >
-                        Delete
+                        <Trash2 size={18} />
                       </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                   </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </motion.div>
           )}
-        </div>
+        </>
       )}
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        tr:hover { background-color: rgba(231, 0, 19, 0.01); }
       `}</style>
     </div>
   );
