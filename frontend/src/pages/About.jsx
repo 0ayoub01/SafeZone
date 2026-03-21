@@ -1,4 +1,4 @@
-import { Info, Code, Map, Shield, Users, Target } from 'lucide-react';
+import { Info, Code, Map, Shield, Users, Target, Eye, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const About = () => {
@@ -89,7 +89,5 @@ const About = () => {
     </div>
   );
 };
-
-import { Eye, Zap } from 'lucide-react';
 
 export default About;

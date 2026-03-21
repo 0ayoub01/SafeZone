@@ -3,6 +3,7 @@ import { collection, query, where, getDocs, orderBy, doc, getDoc } from 'firebas
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { 
   User, 
@@ -22,6 +23,7 @@ import {
 
 const Profile = () => {
   const { currentUser, logout, isAdmin, canModerate } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [reports, setReports] = useState([]);
   const [profile, setProfile] = useState(null);
@@ -91,11 +93,11 @@ const Profile = () => {
               <div className="avatar avatar-xl" style={{ boxShadow: 'var(--shadow-glow)', marginBottom: '1.5rem' }}>
                 {initials}
               </div>
-              <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{profile?.fullName || 'Verified Citizen'}</h3>
+              <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{profile?.fullName || t('profile.verifiedCit')}</h3>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center' }}>
-                {isAdmin && <span className="badge badge-reported" style={{ fontSize: '0.65rem' }}>Admin</span>}
-                {canModerate && <span className="badge badge-progress" style={{ fontSize: '0.65rem' }}>Moderator</span>}
-                <span className="badge badge-other" style={{ fontSize: '0.65rem' }}>Verified</span>
+                {isAdmin && <span className="badge badge-reported" style={{ fontSize: '0.65rem' }}>{t('nav.admin')}</span>}
+                {canModerate && <span className="badge badge-progress" style={{ fontSize: '0.65rem' }}>{t('nav.moderator')}</span>}
+                <span className="badge badge-other" style={{ fontSize: '0.65rem' }}>{t('profile.verified')}</span>
               </div>
             </div>
 
@@ -103,21 +105,21 @@ const Profile = () => {
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                 <div style={{ color: 'var(--clr-primary)' }}><Mail size={18} /></div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--clr-text-muted)', fontWeight: 600 }}>Email</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--clr-text-muted)', fontWeight: 600 }}>{t('profile.email')}</div>
                   <div style={{ fontSize: '0.9rem', fontWeight: 600, wordBreak: 'break-all' }}>{currentUser.email}</div>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                 <div style={{ color: 'var(--clr-primary)' }}><Phone size={18} /></div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--clr-text-muted)', fontWeight: 600 }}>Phone</div>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{profile?.phone || 'Not provided'}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--clr-text-muted)', fontWeight: 600 }}>{t('profile.phone')}</div>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{profile?.phone || t('profile.notProvided')}</div>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                 <div style={{ color: 'var(--clr-primary)' }}><MapPin size={18} /></div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--clr-text-muted)', fontWeight: 600 }}>Location</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--clr-text-muted)', fontWeight: 600 }}>{t('profile.location')}</div>
                   <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{profile?.city || 'Tunisia'}</div>
                 </div>
               </div>
@@ -125,7 +127,7 @@ const Profile = () => {
 
             <button onClick={handleLogout} className="btn btn-outline" style={{ width: '100%', marginTop: '3rem', gap: '0.6rem', color: 'var(--clr-error)', borderColor: 'var(--clr-error-bg)' }}>
               <LogOut size={16} />
-              Sign Out
+              {t('profile.signOut')}
             </button>
           </motion.div>
 
@@ -137,12 +139,12 @@ const Profile = () => {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
               <div>
-                <h2 style={{ fontSize: '2.2rem', marginBottom: '0.25rem' }}>Activity Dashboard</h2>
-                <p style={{ color: 'var(--clr-text-light)' }}>Manage your reports and track their progress.</p>
+                <h2 style={{ fontSize: '2.2rem', marginBottom: '0.25rem' }}>{t('profile.title')}</h2>
+                <p style={{ color: 'var(--clr-text-light)' }}>{t('profile.subtitle')}</p>
               </div>
               <Link to="/report" className="btn btn-primary" style={{ gap: '0.5rem' }}>
                 <Plus size={18} />
-                New Report
+                {t('nav.report')}
               </Link>
             </div>
 
@@ -150,19 +152,19 @@ const Profile = () => {
             <div className="grid-3" style={{ marginBottom: '3rem' }}>
               <div className="stat-card" style={{ padding: '1.5rem', textAlign: 'left' }}>
                 <div className="stat-value" style={{ fontSize: '2rem' }}>{reports.length}</div>
-                <div className="stat-label">Total Reports</div>
+                <div className="stat-label">{t('profile.total')}</div>
               </div>
               <div className="stat-card" style={{ padding: '1.5rem', textAlign: 'left' }}>
                 <div className="stat-value" style={{ fontSize: '2rem', color: 'var(--clr-success)' }}>
                   {reports.filter(r => r.status === 'Resolved').length}
                 </div>
-                <div className="stat-label">Solved Issues</div>
+                <div className="stat-label">{t('profile.solved')}</div>
               </div>
               <div className="stat-card" style={{ padding: '1.5rem', textAlign: 'left' }}>
                 <div className="stat-value" style={{ fontSize: '2rem', color: 'var(--clr-warning)' }}>
                    {reports.filter(r => r.status === 'In Progress' || r.status === 'Under Review').length}
                 </div>
-                <div className="stat-label">Pending Action</div>
+                <div className="stat-label">{t('profile.pending')}</div>
               </div>
             </div>
 
@@ -195,13 +197,12 @@ const Profile = () => {
                 }}>
                   <FileText size={32} color="var(--clr-text-muted)" />
                 </div>
-                <h3 style={{ marginBottom: '0.75rem' }}>No reports submitted yet</h3>
+                <h3 style={{ marginBottom: '0.75rem' }}>{t('profile.noReportsTitle')}</h3>
                 <p style={{ color: 'var(--clr-text-muted)', marginBottom: '2rem', maxWidth: '400px', margin: '0 auto 2rem' }}>
-                  Help us make Tunisia better! Report issues like potholes, 
-                  broken lights, or sanitation problems in your area.
+                  {t('profile.noReportsDesc')}
                 </p>
                 <Link to="/report" className="btn btn-primary btn-lg">
-                  Submit My First Report
+                  {t('profile.submitFirst')}
                 </Link>
               </div>
             ) : (
@@ -213,7 +214,8 @@ const Profile = () => {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.05 + 0.2 }}
                     className="card-premium" 
-                    style={{ padding: '1.5rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                    onClick={() => navigate(`/browse/${report.id}`)}
+                    style={{ padding: '1.5rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
                     whileHover={{ scale: 1.01 }}
                   >
                     <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
@@ -235,14 +237,16 @@ const Profile = () => {
                             <MapPin size={12} /> {report.city} &bull; {report.neighborhood}
                           </span>
                           <span style={{ fontSize: '0.8rem', color: 'var(--clr-text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                             {report.category}
+                             {t(`category.${report.category}`)}
                           </span>
                         </div>
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                       <span className={`badge ${getStatusBadgeClass(report.status)}`}>
-                        {report.status}
+                        {report.status === 'Reported' ? t('browse.statusReported') : 
+                         report.status === 'In Progress' ? t('browse.statusActive') : 
+                         report.status === 'Resolved' ? t('browse.statusSolved') : report.status}
                       </span>
                       <div style={{ color: 'var(--clr-text-muted)' }}><ChevronRight size={20} /></div>
                     </div>

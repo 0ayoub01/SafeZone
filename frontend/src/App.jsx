@@ -11,7 +11,6 @@ import Moderator from './pages/Moderator';
 import About from './pages/About';
 import Login from './pages/Login';
 import Emergency from './pages/Emergency';
-import Authorities from './pages/Authorities';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 const ProtectedRoute = ({ children }) => {
@@ -43,6 +42,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/browse" element={<Browse />} />
+              <Route path="/browse/:id" element={<Browse />} />
               <Route path="/map" element={<MapView />} />
               <Route path="/about" element={<About />} />
               <Route path="/emergency" element={<Emergency />} />
@@ -51,7 +51,6 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-              <Route path="/authorities" element={<Authorities />} />
             </Routes>
           </main>
           <Footer />

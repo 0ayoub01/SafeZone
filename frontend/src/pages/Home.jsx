@@ -71,7 +71,7 @@ const Home = () => {
           paddingBottom: '6rem',
           paddingTop: '4rem',
           position: 'relative',
-          backgroundImage: `linear-gradient(rgba(var(--h-navy), 47%, 11%, 0.75), rgba(var(--h-navy), 47%, 11%, 0.85)), url(${bgCity})`,
+          backgroundImage: `linear-gradient(hsla(var(--h-navy), 47%, 11%, 0.75), hsla(var(--h-navy), 47%, 11%, 0.85)), url(${bgCity})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           borderRadius: 'var(--r-2xl)',

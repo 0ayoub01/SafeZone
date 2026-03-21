@@ -17,7 +17,7 @@ const CustomSelect = ({ value, onChange, options, placeholder, icon: Icon, class
   }, []);
 
   return (
-    <div className={`custom-select-wrapper ${className}`} ref={dropdownRef} style={{ position: 'relative', width: '100%', ...style }}>
+    <div className={`custom-select-wrapper ${className}`} ref={dropdownRef} style={{ position: 'relative', width: '100%' }}>
       <div 
         className="form-control"
         style={{ 
