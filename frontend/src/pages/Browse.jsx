@@ -296,11 +296,12 @@ const Browse = () => {
           </div>
         ) : (
           <motion.div layout style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', 
-            gap: '2rem', 
+            display: 'flex', 
+            flexDirection: 'column',
+            gap: '1rem', 
             marginBottom: '5rem',
-            alignItems: 'start'
+            maxWidth: '860px',
+            margin: '0 auto 5rem'
           }}>
             <AnimatePresence>
               {reports.map((report) => {
@@ -311,74 +312,83 @@ const Browse = () => {
                   <motion.div 
                     key={report.id}
                     layout
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
                     className="card-premium"
-                    style={{ position: 'relative', overflow: 'hidden', padding: '0', display: 'flex', flexDirection: 'column' }}
-                    whileHover={{ y: -5 }}
+                    style={{ 
+                      padding: '1.5rem', 
+                      display: 'flex', 
+                      alignItems: 'center',
+                      gap: '1.5rem',
+                      cursor: 'pointer'
+                    }}
+                    whileHover={{ scale: 1.01, borderColor: 'var(--clr-primary-alpha)' }}
+                    onClick={() => {
+                      setSelectedReport(report);
+                      navigate(`/browse/${report.id}`);
+                    }}
                   >
-                    <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
-                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                           <span className="badge" style={{ backgroundColor: status.bg, color: status.color, alignSelf: 'flex-start', padding: '0.3rem 0.6rem' }}>
-                             <status.icon size={12} style={{ marginRight: '0.4rem' }} />
-                             {status.label}
-                           </span>
-                           <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--clr-primary)', textTransform: 'uppercase' }}>{t(`category.${report.category}`)}</div>
-                         </div>
-                         <div style={{ fontSize: '0.75rem', color: 'var(--clr-text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                            <Clock size={12} /> {formatDate(report.createdAt)}
-                         </div>
+                    <div style={{ 
+                      width: '60px', 
+                      height: '60px', 
+                      borderRadius: '16px', 
+                      background: status.bg, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <status.icon size={26} color={status.color} />
+                    </div>
+
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
+                        <span className="badge" style={{ backgroundColor: status.bg, color: status.color, padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}>
+                          {status.label}
+                        </span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--clr-primary)', textTransform: 'uppercase' }}>
+                          {t(`category.${report.category}`)}
+                        </span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--clr-text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem', marginLeft: 'auto' }}>
+                          <Clock size={12} /> {formatDate(report.createdAt)}
+                        </span>
                       </div>
 
-                      <h4 style={{ fontSize: '1.2rem', marginBottom: '0.75rem', lineHeight: '1.3' }}>{report.title}</h4>
+                      <h4 style={{ fontSize: '1.15rem', marginBottom: '0.5rem', lineHeight: '1.3', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {report.title}
+                      </h4>
                       
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--clr-text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-                        <MapPin size={14} /> {report.city}, {report.neighborhood}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: 'var(--clr-text-muted)', fontSize: '0.85rem' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <MapPin size={14} /> {report.city}, {report.neighborhood}
+                        </span>
                       </div>
+                    </div>
 
-                      <div style={{ marginTop: 'auto', paddingTop: '1.25rem', borderTop: '1px solid var(--clr-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', gap: '1rem' }}>
-                          <button 
-                            disabled={!currentUser || updatingUpvote === report.id}
-                            onClick={(e) => handleUpvote(e, report)}
-                            style={{ 
-                              background: 'none', 
-                              border: 'none', 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '0.4rem', 
-                              fontSize: '0.85rem',
-                              fontWeight: 700,
-                              color: isUpvoted ? 'var(--clr-primary)' : 'var(--clr-text-muted)',
-                              cursor: currentUser ? 'pointer' : 'default'
-                            }}
-                          >
-                            <ThumbsUp size={16} fill={isUpvoted ? 'var(--clr-primary)' : 'none'} />
-                            {report.upvotes?.length || 0}
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedReport(report);
-                              navigate(`/browse/${report.id}`);
-                            }}
-                            style={{ background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: 'var(--clr-text-muted)', cursor: 'pointer' }}
-                          >
-                            <MessageSquare size={16} />
-                            {report.commentCount || 0}
-                          </button>
-                        </div>
-                        <button 
-                          className="btn btn-ghost btn-sm" 
-                          onClick={() => {
-                            setSelectedReport(report);
-                            navigate(`/browse/${report.id}`);
-                          }}
-                          style={{ color: 'var(--clr-primary)', fontWeight: 800 }}
-                        >
-                          {t('browse.details')} <ChevronRight size={14} />
-                        </button>
+                    <div style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      justifyContent: 'center',
+                      alignItems: 'flex-end',
+                      gap: '0.75rem',
+                      borderLeft: '1px solid var(--clr-border)',
+                      paddingLeft: '1.5rem',
+                      marginLeft: '0.5rem',
+                      minWidth: '70px',
+                      flexShrink: 0
+                    }}>
+                      <button 
+                        disabled={!currentUser || updatingUpvote === report.id}
+                        onClick={(e) => handleUpvote(e, report)}
+                        style={{ background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.95rem', fontWeight: 700, color: isUpvoted ? 'var(--clr-primary)' : 'var(--clr-text-muted)', cursor: currentUser ? 'pointer' : 'default' }}
+                      >
+                        <ThumbsUp size={16} fill={isUpvoted ? 'var(--clr-primary)' : 'none'} />
+                        {report.upvotes?.length || 0}
+                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.95rem', color: 'var(--clr-text-muted)', fontWeight: 600 }}>
+                        <MessageSquare size={16} />
+                        {report.commentCount || 0}
                       </div>
                     </div>
                   </motion.div>
