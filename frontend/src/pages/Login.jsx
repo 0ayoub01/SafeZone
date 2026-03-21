@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Mail, Lock, LogIn, UserPlus, AlertCircle, ArrowLeft, User, ShieldCheck, Phone, MapPin } from 'lucide-react';
 import bgCommunity from '../assets/bg-community.png';
 import { tunisianLocations } from '../data/locations';
+import CustomSelect from '../components/CustomSelect';
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -136,23 +137,13 @@ const Login = () => {
 
                 <div className="form-group">
                   <label className="form-label">City (Governorate)</label>
-                  <div style={{ position: 'relative' }}>
-                    <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--clr-text-muted)' }}>
-                      <MapPin size={18} />
-                    </span>
-                    <select 
-                      className="form-control" 
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      required={!isLogin}
-                      style={{ paddingLeft: '3rem' }}
-                    >
-                      <option value="">Select your city</option>
-                      {Object.keys(tunisianLocations).map(c => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <CustomSelect 
+                    value={city}
+                    onChange={setCity}
+                    options={Object.keys(tunisianLocations)}
+                    placeholder="Select your city"
+                    icon={MapPin}
+                  />
                 </div>
               </>
             )}

@@ -17,6 +17,7 @@ import {
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import CustomSelect from '../components/CustomSelect';
 import { 
   MapPin, 
   Calendar, 
@@ -238,43 +239,37 @@ const Browse = () => {
             maxWidth: '900px',
             margin: '3rem auto 0'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 'min(100%, 180px)' }}>
-              <MapPin size={18} color="var(--clr-primary)" />
-              <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                <select 
-                  className="form-control" 
-                  style={{ border: 'none', padding: '0', height: 'auto', fontWeight: 600, fontSize: '0.85rem' }}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: 'min(100%, 180px)' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '0.4rem' }}>
+                <CustomSelect
                   value={cityFilter}
-                  onChange={(e) => { setCityFilter(e.target.value); setDelegationFilter(''); }}
-                >
-                  <option value="">All Governorates</option>
-                  {dynamicCities.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+                  onChange={(val) => { setCityFilter(val); setDelegationFilter(''); }}
+                  options={dynamicCities}
+                  placeholder="All Governorates"
+                  icon={MapPin}
+                  style={{ border: 'none', boxShadow: 'none', padding: '0.2rem', backgroundColor: 'transparent', fontWeight: 600, fontSize: '0.9rem' }}
+                />
                 {cityFilter && (
-                  <select 
-                    className="form-control" 
-                    style={{ border: 'none', padding: '0', height: 'auto', fontWeight: 500, fontSize: '0.75rem', color: 'var(--clr-text-muted)' }}
+                  <CustomSelect
                     value={delegationFilter}
-                    onChange={(e) => setDelegationFilter(e.target.value)}
-                  >
-                    <option value="">All Delegations</option>
-                    {dynamicDelegations.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
+                    onChange={setDelegationFilter}
+                    options={dynamicDelegations}
+                    placeholder="All Delegations"
+                    style={{ border: 'none', boxShadow: 'none', padding: '0.2rem', backgroundColor: 'transparent', fontWeight: 500, fontSize: '0.8rem', color: 'var(--clr-text-muted)' }}
+                  />
                 )}
               </div>
             </div>
-            <div style={{ width: '1px', backgroundColor: 'var(--clr-border)', height: '24px', alignSelf: 'center' }} />
+            <div style={{ width: '1px', backgroundColor: 'var(--clr-border)', height: '40px', alignSelf: 'center' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 0.8, minWidth: 'min(100%, 150px)' }}>
-              <Tag size={18} color="var(--clr-primary)" />
-              <select 
-                className="form-control" 
-                style={{ border: 'none', padding: '0', height: 'auto', fontWeight: 600 }}
+              <CustomSelect
                 value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-              >
-                <option value="">{t('browse.filterCategory')}</option>
-                {categories.map(c => <option key={c} value={c}>{t(`category.${c}`)}</option>)}
-              </select>
+                onChange={setCategoryFilter}
+                options={categories.map(c => ({ value: c, label: t(`category.${c}`) }))}
+                placeholder={t('browse.filterCategory')}
+                icon={Tag}
+                style={{ border: 'none', boxShadow: 'none', padding: '0.2rem', backgroundColor: 'transparent', fontWeight: 600, fontSize: '0.9rem' }}
+              />
             </div>
             <button className="btn btn-primary" onClick={fetchReports} style={{ padding: '0.6rem 1rem' }}>
               <RefreshCw size={18} />
