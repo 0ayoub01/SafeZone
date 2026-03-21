@@ -102,7 +102,7 @@ const Moderator = () => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     className="card-premium"
-                    style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}
+                    style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem', overflow: 'visible' }}
                    >
                     <div style={{ width: '50px', height: '50px', borderRadius: '16px', background: `${statusColor}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <ShieldAlert size={24} color={statusColor} />

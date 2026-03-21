@@ -79,7 +79,7 @@ const Admin = () => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     className="card-premium"
-                    style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}
+                    style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem', overflow: 'visible' }}
                   >
                     <div style={{ width: '50px', height: '50px', borderRadius: '16px', background: user.role === 'admin' ? 'rgba(231,0,19,0.1)' : user.role === 'moderator' ? 'rgba(59,130,246,0.1)' : 'var(--clr-bg-raised)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       {user.role === 'admin' ? <Shield size={24} color="var(--clr-primary)" /> : user.role === 'moderator' ? <ShieldCheck size={24} color="var(--clr-info)" /> : <UserIcon size={24} color="var(--clr-text-muted)" />}
