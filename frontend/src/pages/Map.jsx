@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { Link } from 'react-router-dom';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import L from 'leaflet';
@@ -15,7 +16,9 @@ import {
   Zap, 
   Map as MapIcon,
   Flame,
-  LayoutGrid
+  LayoutGrid,
+  RefreshCw,
+  MapPin
 } from 'lucide-react';
 
 // Fix for default marker icon
@@ -96,7 +99,8 @@ const MapView = () => {
     }
   };
 
-  const mapCenter = [36.8065, 10.1815]; // Center on Tunis
+  const mapCenter = [33.8, 9.5]; // Center of Tunisia
+  const tunisiaBounds = [[30.24, 7.52], [37.54, 11.60]]; // SW and NE corners of Tunisia
 
   return (
     <div className="view">
@@ -112,57 +116,20 @@ const MapView = () => {
 
         <div style={{ position: 'relative', height: '700px', borderRadius: 'var(--r-2xl)', overflow: 'hidden', boxShadow: 'var(--shadow-2xl)', border: '1px solid var(--clr-border)' }}>
           
-          {/* Map Controls Overlay */}
-          <div style={{ position: 'absolute', top: '2rem', right: '2rem', zIndex: 1000, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <motion.button 
-              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-              onClick={() => setShowHeatmap(!showHeatmap)}
-              className={`btn ${showHeatmap ? 'btn-primary' : 'btn-white'}`}
-              style={{ width: '50px', height: '50px', padding: '0', borderRadius: '12px', boxShadow: 'var(--shadow-lg)' }}
-              title={showHeatmap ? "Switch to Markers" : "Switch to Heatmap"}
-            >
-              {showHeatmap ? <LayoutGrid size={22} /> : <Flame size={22} />}
-            </motion.button>
-            <motion.button 
-              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-              className="btn btn-white"
-              style={{ width: '50px', height: '50px', padding: '0', borderRadius: '12px', boxShadow: 'var(--shadow-lg)' }}
-              title="Filter by category"
-            >
-              <Filter size={22} />
-            </motion.button>
-          </div>
-
-          {/* Category Quick Filters */}
-          <div style={{ position: 'absolute', bottom: '2rem', left: '50%', transform: 'translateX(-50%)', zIndex: 1000, display: 'flex', gap: '0.5rem', backgroundColor: 'rgba(255,255,255,0.8)', padding: '0.5rem', borderRadius: 'var(--r-xl)', backdropFilter: 'blur(12px)', border: '1px solid var(--clr-border)', boxShadow: 'var(--shadow-xl)' }}>
-            {['All', 'Roads', 'Lighting', 'Sanitation', 'Water'].map(cat => (
-              <button 
-                key={cat}
-                onClick={() => setActiveFilter(cat)}
-                style={{ 
-                  padding: '0.6rem 1.25rem', 
-                  borderRadius: 'var(--r-lg)', 
-                  border: 'none',
-                  fontSize: '0.85rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  backgroundColor: activeFilter === cat ? 'var(--clr-primary)' : 'transparent',
-                  color: activeFilter === cat ? 'white' : 'var(--clr-text)',
-                  transition: 'var(--trans-md)'
-                }}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
           {loading && (
-            <div style={{ position: 'absolute', inset: 0, zIndex: 2000, backgroundColor: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ position: 'absolute', inset: 0, zIndex: 9999, backgroundColor: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <RefreshCw size={48} className="spinner" color="var(--clr-primary)" />
             </div>
           )}
 
-          <MapContainer center={mapCenter} zoom={7} style={{ height: '100%', width: '100%' }}>
+          <MapContainer
+            center={mapCenter}
+            zoom={6}
+            minZoom={6}
+            maxBounds={tunisiaBounds}
+            maxBoundsViscosity={1.0}
+            style={{ height: '100%', width: '100%', zIndex: 1 }}
+          >
             <TileLayer 
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
               url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" 
@@ -196,6 +163,51 @@ const MapView = () => {
               ))
             )}
           </MapContainer>
+
+          {/* Map Controls Overlay */}
+          <div style={{ position: 'absolute', top: '2rem', right: '2rem', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '0.75rem', pointerEvents: 'auto' }} onMouseOver={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()}>
+            <motion.button 
+              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+              onClick={(e) => { e.stopPropagation(); setShowHeatmap(!showHeatmap); }}
+              className={`btn ${showHeatmap ? 'btn-primary' : 'btn-white'}`}
+              style={{ width: '50px', height: '50px', padding: '0', borderRadius: '12px', boxShadow: 'var(--shadow-lg)', pointerEvents: 'auto' }}
+              title={showHeatmap ? "Switch to Markers" : "Switch to Heatmap"}
+            >
+              {showHeatmap ? <LayoutGrid size={22} /> : <Flame size={22} />}
+            </motion.button>
+            <motion.button 
+              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+              className="btn btn-white"
+              onClick={(e) => { e.stopPropagation(); document.getElementById('map-filter-nav')?.scrollIntoView({behavior: 'smooth'}); }}
+              style={{ width: '50px', height: '50px', padding: '0', borderRadius: '12px', boxShadow: 'var(--shadow-lg)', pointerEvents: 'auto' }}
+              title="Filter by category"
+            >
+              <Filter size={22} />
+            </motion.button>
+          </div>
+
+          {/* Category Quick Filters */}
+          <div id="map-filter-nav" style={{ position: 'absolute', bottom: '2rem', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, display: 'flex', gap: '0.5rem', backgroundColor: 'var(--glass-bg)', padding: '0.5rem', borderRadius: 'var(--r-xl)', backdropFilter: 'blur(12px)', border: '1px solid var(--clr-border)', boxShadow: 'var(--shadow-xl)', pointerEvents: 'auto' }} onMouseOver={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()}>
+            {['All', 'Roads', 'Lighting', 'Sanitation', 'Water'].map(cat => (
+              <button 
+                key={cat}
+                onClick={(e) => { e.stopPropagation(); setActiveFilter(cat); }}
+                style={{ 
+                  padding: '0.6rem 1.25rem', 
+                  borderRadius: 'var(--r-lg)', 
+                  border: 'none',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  backgroundColor: activeFilter === cat ? 'var(--clr-primary)' : 'transparent',
+                  color: activeFilter === cat ? 'white' : 'var(--clr-text)',
+                  transition: 'var(--trans-md)'
+                }}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="grid-3" style={{ marginTop: '4rem' }}>
