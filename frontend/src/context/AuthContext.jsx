@@ -7,7 +7,7 @@ import {
   GithubAuthProvider,
   signInWithPopup
 } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
 const AuthContext = createContext();
@@ -17,10 +17,21 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [userRole, setUserRole] = useState(null); // 'admin' or 'user'
+  const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const signup = (email, password) =>
-    createUserWithEmailAndPassword(auth, email, password);
+  const signup = async (email, password, fullName, phone, city) => {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    await setDoc(doc(db, 'users', userCredential.user.uid), {
+      fullName: fullName || '',
+      phone: phone || '',
+      city: city || '',
+      email: email,
+      role: 'user',
+      createdAt: serverTimestamp()
+    });
+    return userCredential;
+  };
 
   const login = (email, password) => {
     return signInWithEmailAndPassword(auth, email, password);
@@ -41,12 +52,28 @@ export const AuthProvider = ({ children }) => {
       if (user) {
         try {
           const userDoc = await getDoc(doc(db, 'users', user.uid));
-          setUserRole(userDoc.exists() ? userDoc.data().role : 'user');
+          if (userDoc.exists()) {
+            setUserRole(userDoc.data().role);
+            setUserProfile(userDoc.data());
+          } else {
+            // Auto-create missing legacy profile
+            const newProfile = {
+              fullName: user.displayName || 'Verified Citizen',
+              email: user.email,
+              role: 'user',
+              createdAt: serverTimestamp()
+            };
+            await setDoc(doc(db, 'users', user.uid), newProfile);
+            setUserRole('user');
+            setUserProfile(newProfile);
+          }
         } catch {
           setUserRole('user');
+          setUserProfile(null);
         }
       } else {
         setUserRole(null);
+        setUserProfile(null);
       }
       setLoading(false);
     });
@@ -58,7 +85,7 @@ export const AuthProvider = ({ children }) => {
   const canModerate = isAdmin || isModerator;
 
   return (
-    <AuthContext.Provider value={{ currentUser, userRole, isAdmin, isModerator, canModerate, signup, login, loginWithGithub, logout }}>
+    <AuthContext.Provider value={{ currentUser, userRole, userProfile, isAdmin, isModerator, canModerate, signup, login, loginWithGithub, logout }}>
       {!loading && children}
     </AuthContext.Provider>
   );

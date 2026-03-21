@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
-import { Mail, Lock, LogIn, UserPlus, AlertCircle, ArrowLeft, User, ShieldCheck, Phone } from 'lucide-react';
+import { Mail, Lock, LogIn, UserPlus, AlertCircle, ArrowLeft, User, ShieldCheck, Phone, MapPin } from 'lucide-react';
 import bgCommunity from '../assets/bg-community.png';
+import { tunisianLocations } from '../data/locations';
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -11,6 +12,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [city, setCity] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
@@ -26,7 +28,7 @@ const Login = () => {
       if (isLogin) {
         await login(email, password);
       } else {
-        await signup(email, password, name, phone);
+        await signup(email, password, name, phone, city);
       }
       navigate('/');
     } catch (err) {
@@ -129,6 +131,27 @@ const Login = () => {
                       required={!isLogin}
                       style={{ paddingLeft: '3rem' }}
                     />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">City (Governorate)</label>
+                  <div style={{ position: 'relative' }}>
+                    <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--clr-text-muted)' }}>
+                      <MapPin size={18} />
+                    </span>
+                    <select 
+                      className="form-control" 
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      required={!isLogin}
+                      style={{ paddingLeft: '3rem' }}
+                    >
+                      <option value="">Select your city</option>
+                      {Object.keys(tunisianLocations).map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </>

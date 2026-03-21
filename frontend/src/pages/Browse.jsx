@@ -17,7 +17,6 @@ import {
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { tunisianLocations } from '../data/locations';
 import { 
   MapPin, 
   Calendar, 
@@ -52,6 +51,7 @@ const Browse = () => {
   const [selectedReport, setSelectedReport] = useState(null);
   const [updatingUpvote, setUpdatingUpvote] = useState(null);
   const { id } = useParams();
+  const [allReports, setAllReports] = useState([]);
   
   // Comment state
   const [comments, setComments] = useState([]);
@@ -59,7 +59,23 @@ const Browse = () => {
   const [postingComment, setPostingComment] = useState(false);
 
   const categories = ['Roads', 'Lighting', 'Sanitation', 'Water', 'Other'];
-  const tunisCities = Object.keys(tunisianLocations);
+
+  useEffect(() => {
+    const fetchAllDataForFilters = async () => {
+      try {
+        const snap = await getDocs(query(collection(db, 'reports')));
+        setAllReports(snap.docs.map(doc => doc.data()));
+      } catch (e) {
+        console.error("Failed to load global reports for filters", e);
+      }
+    };
+    fetchAllDataForFilters();
+  }, []);
+
+  const dynamicCities = [...new Set(allReports.map(r => r.city).filter(Boolean))].sort();
+  const dynamicDelegations = cityFilter 
+    ? [...new Set(allReports.filter(r => r.city === cityFilter).map(r => r.neighborhood).filter(Boolean))].sort() 
+    : [];
 
   useEffect(() => {
     fetchReports();
@@ -232,7 +248,7 @@ const Browse = () => {
                   onChange={(e) => { setCityFilter(e.target.value); setDelegationFilter(''); }}
                 >
                   <option value="">All Governorates</option>
-                  {tunisCities.map(c => <option key={c} value={c}>{c}</option>)}
+                  {dynamicCities.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
                 {cityFilter && (
                   <select 
@@ -242,7 +258,7 @@ const Browse = () => {
                     onChange={(e) => setDelegationFilter(e.target.value)}
                   >
                     <option value="">All Delegations</option>
-                    {(tunisianLocations[cityFilter] || []).map(d => <option key={d} value={d}>{d}</option>)}
+                    {dynamicDelegations.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
                 )}
               </div>
@@ -279,7 +295,13 @@ const Browse = () => {
             <button className="btn btn-outline" onClick={() => { setCityFilter(''); setCategoryFilter(''); setDelegationFilter(''); }}>Reset</button>
           </div>
         ) : (
-          <motion.div layout className="grid-3" style={{ marginBottom: '4rem' }}>
+          <motion.div layout style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', 
+            gap: '2rem', 
+            marginBottom: '5rem',
+            alignItems: 'start'
+          }}>
             <AnimatePresence>
               {reports.map((report) => {
                 const status = getStatusInfo(report.status);
