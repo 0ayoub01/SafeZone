@@ -1,25 +1,62 @@
-import { useState, useRef, useMemo, useCallback } from 'react';
+import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+// Removed Firebase Storage since the project is on the free plan
 import { db, storage } from '../firebase';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { 
-  Camera, 
   MapPin, 
   CheckCircle2, 
   ChevronRight, 
   ChevronLeft, 
-  Upload, 
   X, 
   AlertCircle,
   Loader2,
-  Navigation
+  Navigation,
+  Search
 } from 'lucide-react';
+import { tunisianLocations } from '../data/locations';
+import { delegationCoords } from '../data/delegationCoords';
+
+// Haversine distance formula
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+};
+
+const findNearestDelegation = (lat, lng, preferredGov = '') => {
+  let nearest = null;
+  let minDistance = Infinity;
+
+  // Filter by governorate if possible to avoid matching a border delegation in another gov
+  const filteredCoords = preferredGov 
+    ? delegationCoords.filter(d => d.gov.toLowerCase().includes(preferredGov.toLowerCase()) || preferredGov.toLowerCase().includes(d.gov.toLowerCase()))
+    : delegationCoords;
+
+  const targetCoords = filteredCoords.length > 0 ? filteredCoords : delegationCoords;
+
+  targetCoords.forEach(del => {
+    const dist = calculateDistance(lat, lng, del.lat, del.lng);
+    if (dist < minDistance) {
+      minDistance = dist;
+      nearest = del;
+    }
+  });
+
+  return nearest ? nearest.name : null;
+};
 
 // Fix for default marker icon
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -31,6 +68,18 @@ let DefaultIcon = L.icon({
   iconSize: [25, 41],
   iconAnchor: [12, 41]
 });
+
+const tunisiaBounds = [[30.24, 7.52], [37.54, 11.60]];
+
+const ChangeMapView = ({ center }) => {
+  const map = useMapEvents({});
+  useEffect(() => {
+    if (center && center.length === 2) {
+      map.flyTo(center, 13);
+    }
+  }, [center[0], center[1]]);
+  return null;
+};
 
 const LocationMarker = ({ position, setPosition }) => {
   const map = useMapEvents({
@@ -57,18 +106,18 @@ const LocationMarker = ({ position, setPosition }) => {
 const Report = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const { t } = useTranslation();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     title: '',
     category: '',
-    city: '',
-    neighborhood: '',
+    city: '', // Governorate
+    neighborhood: '', // Delegation
     description: '',
     location: { lat: 36.8065, lng: 10.1815 } // Default to Tunis
   });
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [isGeocoding, setIsGeocoding] = useState(false);
   const [error, setError] = useState('');
 
   const categories = [
@@ -79,54 +128,64 @@ const Report = () => {
     { id: 'Other', label: 'Other Issue', icon: '⚠️' }
   ];
 
-  const neighborhoodsByCity = {
-    "Ariana": ["Ariana Ville", "Ettadhamen", "Mnihla", "Raoued", "Sidi Thabet", "Soukra", "Kalaat el-Andalous"],
-    "Béja": ["Béja Nord", "Béja Sud", "Amdoun", "Goubellat", "Medjez el-Bab", "Nefza", "Teboursouk", "Testour", "Thibar"],
-    "Ben Arous": ["Ben Arous", "Bou Mhel", "El Mourouj", "Ezzahra", "Fouchana", "Hammam Chott", "Hammam Lif", "Mohamedia", "Mornag", "Radès", "Yasminet", "Khalidia"],
-    "Bizerte": ["Bizerte Nord", "Bizerte Sud", "Ghar El Melh", "Mateur", "Menzel Bourguiba", "Menzel Jemil", "Ras Jebel", "Sejnane", "Utique", "Joumine", "Ghazala", "Tinja"],
-    "Gabès": ["Gabès Ville", "Gabès Ouest", "Gabès Sud", "El Hamma", "Mareth", "Matmata", "Metouia", "Ghannouch", "Menzel El Habib"],
-    "Gafsa": ["Gafsa Ville", "Gafsa Nord", "El Ksar", "Mdhilla", "Metlaoui", "Moularès", "Redeyef", "Sened", "Sidi Aïch", "Om El Larays"],
-    "Jendouba": ["Jendouba Ville", "Jendouba Nord", "Aïn Draham", "Balta-Bou Aouane", "Bou Salem", "Fernana", "Ghardimaou", "Tabarka", "Oued Mliz"],
-    "Kairouan": ["Kairouan Nord", "Kairouan Sud", "Bou Hajla", "Haffouz", "Nasrallah", "Oueslatia", "Sbikha", "Chebika", "Alaâ", "Hajeb El Ayoun"],
-    "Kasserine": ["Kasserine Nord", "Kasserine Sud", "Fériana", "Sbeïtla", "Thala", "Foussana", "Haidra", "Jedeliane", "Majel Bel Abbès", "Sbiba"],
-    "Kébili": ["Kébili Nord", "Kébili Sud", "Douz North", "Douz South", "Souk Lahad", "Faouar"],
-    "Kef": ["Kef Est", "Kef Ouest", "Dahmani", "Jerissa", "Sakiet Sidi Youssef", "Tajerouine", "Kalâat Khasba", "Kalaat Senan", "Nebeur", "Sers"],
-    "Mahdia": ["Mahdia Ville", "Bou Merdes", "Chebba", "El Jem", "Ksour Essef", "Ouled Chamekh", "Chorbane", "Hebira", "Melloulèche", "Sidi Alouane"],
-    "Manouba": ["Manouba Ville", "Den Den", "Douar Hicher", "Mornaguia", "Oued Ellil", "Tebourba", "Borj El Amri", "El Battane"],
-    "Médenine": ["Médenine Nord", "Médenine Sud", "Ben Guerdane", "Djerba Ajim", "Djerba Houmt Souk", "Djerba Midoun", "Zarzis", "Beni Khedache", "Sidi Makhlouf"],
-    "Monastir": ["Monastir Ville", "Bekalta", "Jemmal", "Ksar Hellal", "Moknine", "Ouerdanine", "Sahline", "Téboulba", "Bembla", "Beni Hassen", "Sayada-Lamta-Bou Hajar", "Ksibat el-Médiouni"],
-    "Nabeul": ["Nabeul Ville", "Béni Khiar", "Hammamet", "Kélibia", "Korba", "Menzel Temime", "Soliman", "Béni Khalled", "Bou Argoub", "Dar Chaâbane El Fehri", "El Haouaria", "Grombalia", "Menzel Bouzelfa", "Takilsa"],
-    "Sfax": ["Sfax Ville", "Sfax Ouest", "Sfax Sud", "Sakiet Eddaïer", "Sakiet Ezzit", "Agareb", "Kerkennah", "Mahrès", "Thyna", "Bir Ali Ben Khalifa", "El Hencha", "Graïba", "Jebiniana", "Skhira"],
-    "Sidi Bouzid": ["Sidi Bouzid Est", "Sidi Bouzid Ouest", "Bir El Hafey", "Jilma", "Meknassy", "Regueb", "Ben Oun", "Cebbala Ouled Asker", "Menzel Bouzaiane", "Mezzouna", "Ouled Haffouz"],
-    "Siliana": ["Siliana Ville", "Siliana Nord", "Siliana Sud", "Bou Arada", "Gaâfour", "Makthar", "Rouhia", "Bargou", "El Krib", "Kesra"],
-    "Sousse": ["Sousse Ville", "Sousse Jawhara", "Sousse Riadh", "Sousse Sidi Abdelhamid", "Akouda", "Hammam Sousse", "Kalaâ Kebira", "Kalaâ Seghira", "M'saken", "Port El Kantaoui", "Bouficha", "Enfidha", "Kondar", "Sidi Bou Ali", "Sidi El Hani"],
-    "Tataouine": ["Tataouine Nord", "Tataouine Sud", "Ghomrassen", "Remada", "Smâr", "Bir Lahmar", "Dehiba"],
-    "Tozeur": ["Tozeur Ville", "Degache", "Hazoua", "Nefta", "Tameghza"],
-    "Tunis": ["Medina", "Bab El Bhar", "Bab Souika", "Carthage", "Cité El Khadra", "El Menzah", "El Omrane", "El Ouardia", "Ezzouhour", "Hraïria", "Jebel Jelloud", "La Goulette", "La Marsa", "Le Bardo", "Le Kram", "Sidi El Béchir", "Sidi Hassine", "Sidi Bou Saïd", "La Goulette"],
-    "Zaghouan": ["Zaghouan Ville", "Bir Mcherga", "El Fahs", "Nadhour", "Zriba", "Saouaf"]
-  };
+  const reverseGeocode = async (lat, lng) => {
+    setIsGeocoding(true);
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+      const data = await res.json();
+      
+      if (data && data.address) {
+        const addr = data.address;
+        
+        // Map Nominatim attributes to Tunisian administrative divisions
+        // Governorate is usually in 'state' or 'county'
+        const governorate = addr.state || addr.county || '';
+        // Delegation is usually in one of these fields in Tunisia
+        const delegation = addr.city_district || addr.city || addr.town || addr.village || addr.municipality || addr.suburb || addr.neighbourhood || addr.residential || addr.hamlet || addr.county || '';
+        
+        // Clean up governorate name
+        const cleanGov = governorate.replace(/Governorate|Wilayah|Wilayat|ولاية|Manouba/gi, (match) => match.toLowerCase() === 'manouba' ? 'Manouba' : '').trim();
+        
+        // Attempt to match with our structured data
+        const matchedGov = Object.keys(tunisianLocations).find(gov => 
+          cleanGov.toLowerCase().includes(gov.toLowerCase()) || 
+          gov.toLowerCase().includes(cleanGov.toLowerCase())
+        ) || cleanGov || 'Tunis';
 
-  const tunisCities = Object.keys(neighborhoodsByCity).sort();
+        // Try to match the delegation name with our list
+        const possibleDelegations = tunisianLocations[matchedGov] || [];
+        let matchedDelFromList = possibleDelegations.find(del => 
+          delegation.toLowerCase().includes(del.toLowerCase()) || 
+          del.toLowerCase().includes(delegation.toLowerCase())
+        );
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setError('Image size should be less than 5MB');
-        return;
+        // SMART FALLBACK: If still unknown, find nearest delegation by distance
+        if (!matchedDelFromList && (!delegation || delegation.toLowerCase().includes('unknown'))) {
+          matchedDelFromList = findNearestDelegation(lat, lng, matchedGov);
+        }
+
+        const matchedDel = matchedDelFromList || delegation || 'Unknown Area';
+
+        setFormData(prev => ({ 
+          ...prev, 
+          city: matchedGov,
+          neighborhood: matchedDel,
+          location: { lat, lng }
+        }));
+      } else {
+        setFormData(prev => ({ ...prev, city: 'Tunis', neighborhood: 'Unknown Area', location: { lat, lng } }));
       }
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result);
-      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Geocoding error:', err);
+      setFormData(prev => ({ ...prev, city: 'Tunis', neighborhood: 'Unknown Area', location: { lat, lng } }));
+    } finally {
+      setIsGeocoding(false);
     }
   };
 
   const handleLocationChange = (latlng) => {
-    setFormData(prev => ({ 
-      ...prev, 
-      location: { lat: latlng.lat, lng: latlng.lng } 
-    }));
+    setFormData(prev => ({ ...prev, location: { lat: latlng.lat, lng: latlng.lng } }));
+    reverseGeocode(latlng.lat, latlng.lng);
   };
 
   const getUserLocation = () => {
@@ -154,16 +213,9 @@ const Report = () => {
     setError('');
 
     try {
-      let imageUrl = '';
-      if (imageFile) {
-        const storageRef = ref(storage, `reports/${Date.now()}_${imageFile.name}`);
-        const uploadTask = await uploadBytes(storageRef, imageFile);
-        imageUrl = await getDownloadURL(uploadTask.ref);
-      }
-
       await addDoc(collection(db, 'reports'), {
         ...formData,
-        imageUrl,
+        imageUrl: '',
         status: 'Reported',
         createdAt: serverTimestamp(),
         userId: currentUser.uid,
@@ -175,7 +227,7 @@ const Report = () => {
       navigate('/browse');
     } catch (err) {
       console.error(err);
-      setError('An error occurred while submitting the report. Please try again.');
+      setError(err.message || 'An error occurred while submitting the report. Please try again.');
       setSubmitting(false);
     }
   };
@@ -198,13 +250,13 @@ const Report = () => {
     <div className="view">
       <div className="container" style={{ maxWidth: '800px' }}>
         <header style={{ textAlign: 'center', marginBottom: '3rem' }}>
-          <h2 className="section-title">Report an Issue</h2>
-          <p className="section-subtitle">Help us improve Tunisia by reporting infrastructure or safety concerns in your area.</p>
+          <h2 className="section-title">{t('report.title')}</h2>
+          <p className="section-subtitle">{t('report.subtitle')}</p>
         </header>
 
         {/* Custom Progress Stepper */}
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '3rem', gap: '0.5rem' }}>
-          {[1, 2, 3, 4].map(s => (
+          {[1, 2, 3].map(s => (
             <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <div style={{ 
                 width: '32px', 
@@ -222,7 +274,7 @@ const Report = () => {
               }}>
                 {step > s ? <CheckCircle2 size={16} /> : s}
               </div>
-              {s < 4 && (
+              {s < 3 && (
                 <div style={{ 
                   width: '40px', 
                   height: '3px', 
@@ -253,7 +305,7 @@ const Report = () => {
                 animate="visible"
                 exit="exit"
               >
-                <h3 style={{ textAlign: 'center', marginBottom: '2rem' }}>What kind of issue are you reporting?</h3>
+                <h3 style={{ textAlign: 'center', marginBottom: '2rem' }}>{t('report.step1')}</h3>
                 <div className="grid-3" style={{ gap: '1.5rem' }}>
                   {categories.map((cat) => (
                     <button
@@ -276,7 +328,7 @@ const Report = () => {
                       }}
                     >
                       <span style={{ fontSize: '3rem' }}>{cat.icon}</span>
-                      <span style={{ fontWeight: 700, fontSize: '1rem' }}>{cat.label}</span>
+                      <span style={{ fontWeight: 700, fontSize: '1rem' }}>{t(`category.${cat.id}`)}</span>
                     </button>
                   ))}
                 </div>
@@ -292,72 +344,107 @@ const Report = () => {
                 animate="visible"
                 exit="exit"
               >
-                <h3 style={{ textAlign: 'center', marginBottom: '2rem' }}>Where is it located?</h3>
-                
-                <div className="grid-2">
-                  <div className="form-group">
-                    <label className="form-label">City / Governorate</label>
-                    <select 
-                      className="form-control"
-                      value={formData.city}
-                      onChange={(e) => setFormData({ ...formData, city: e.target.value, neighborhood: '' })}
-                    >
-                      <option value="">Select City</option>
-                      {tunisCities.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Neighborhood / Area</label>
-                    <select 
-                      className="form-control"
-                      value={formData.neighborhood}
-                      disabled={!formData.city}
-                      onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
-                    >
-                      <option value="">Select Neighborhood</option>
-                      {formData.city && neighborhoodsByCity[formData.city]?.map(n => (
-                        <option key={n} value={n}>{n}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+                <h3 style={{ textAlign: 'center', marginBottom: '2rem' }}>{t('report.step2')}</h3>
 
-                <div className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>Pin precise location on map (Optional)</span>
+                <div className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '1rem' }}>
+                  <div>
+                    <h4 style={{ marginBottom: '0.25rem' }}>{t('report.stepPin')}</h4>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--clr-text-muted)', display: 'flex', alignItems: 'center', gap: '0.5rem', minHeight: '20px' }}>
+                      {isGeocoding ? (
+                        <><Loader2 size={14} className="spinner" /> {t('report.detecting')}</>
+                      ) : formData.city ? (
+                        <><MapPin size={14} color="var(--clr-primary)" /> {formData.neighborhood}, {formData.city}</>
+                      ) : (
+                        t('report.clickMap')
+                      )}
+                    </div>
+                  </div>
                   <button 
                     type="button"
                     onClick={getUserLocation}
                     className="btn btn-ghost btn-sm"
-                    style={{ color: 'var(--clr-primary)', gap: '0.4rem' }}
+                    style={{ color: 'var(--clr-primary)', gap: '0.4rem', padding: '0.4rem 0.8rem' }}
                   >
-                    <Navigation size={14} /> Use My Location
+                    <Navigation size={14} /> {t('report.useLocation')}
                   </button>
                 </div>
                 
-                <div style={{ height: '300px', width: '100%', borderRadius: 'var(--r-lg)', overflow: 'hidden', border: '1.5px solid var(--clr-border)', marginBottom: '2rem' }}>
-                  <MapContainer center={[formData.location.lat, formData.location.lng]} zoom={13} style={{ height: '100%', width: '100%' }}>
+                <div style={{ position: 'relative', height: '350px', width: '100%', borderRadius: 'var(--r-lg)', overflow: 'hidden', border: '1.5px solid var(--clr-border)', marginBottom: '2rem' }}>
+                  {/* Location Search Overlay */}
+                  <div style={{ 
+                    position: 'absolute', 
+                    top: '1rem', 
+                    left: '1rem', 
+                    right: '1rem', 
+                    zIndex: 1000,
+                    display: 'flex',
+                    gap: '0.5rem'
+                  }}>
+                    <div style={{ position: 'relative', flex: 1 }}>
+                      <input 
+                        type="text" 
+                        placeholder="Search for a neighborhood or street..." 
+                        className="form-control"
+                        style={{ 
+                          height: '45px', 
+                          paddingLeft: '2.5rem', 
+                          backgroundColor: 'var(--clr-surface)', 
+                          boxShadow: 'var(--shadow-lg)',
+                          border: 'none'
+                        }}
+                        onKeyDown={async (e) => {
+                          if (e.key === 'Enter') {
+                            const query = e.target.value;
+                            if (!query) return;
+                            try {
+                              const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Tunisia')}&limit=1`);
+                              const data = await res.json();
+                              if (data && data.length > 0) {
+                                const { lat, lon } = data[0];
+                                handleLocationChange({ lat: parseFloat(lat), lng: parseFloat(lon) });
+                              }
+                            } catch (err) {
+                              console.error('Search error:', err);
+                            }
+                          }
+                        }}
+                      />
+                      <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--clr-primary)' }} />
+                    </div>
+                  </div>
+
+                  <MapContainer
+                    center={[formData.location.lat, formData.location.lng]}
+                    zoom={13}
+                    minZoom={7}
+                    maxBounds={tunisiaBounds}
+                    maxBoundsViscosity={1.0}
+                    style={{ height: '100%', width: '100%' }}
+                  >
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                    <ChangeMapView center={[formData.location.lat, formData.location.lng]} />
                     <LocationMarker position={formData.location} setPosition={handleLocationChange} />
                   </MapContainer>
                 </div>
 
+
                 <div style={{ display: 'flex', gap: '1rem', marginTop: 'auto' }}>
                   <button onClick={prevStep} className="btn btn-outline" style={{ flex: 1 }}>
-                    <ChevronLeft size={18} /> Back
+                    <ChevronLeft size={18} /> {t('report.back')}
                   </button>
                   <button 
                     onClick={nextStep} 
-                    disabled={!formData.city || !formData.neighborhood}
+                    disabled={!formData.city || isGeocoding}
                     className="btn btn-primary" 
                     style={{ flex: 1.5 }}
                   >
-                    Next: Add Evidence <ChevronRight size={18} />
+                    {t('report.next')} <ChevronRight size={18} />
                   </button>
                 </div>
               </motion.div>
             )}
 
-            {/* STEP 3: EVIDENCE */}
+            {/* STEP 3: DETAILS */}
             {step === 3 && (
               <motion.div 
                 key="step3"
@@ -365,94 +452,15 @@ const Report = () => {
                 initial="hidden"
                 animate="visible"
                 exit="exit"
-                style={{ textAlign: 'center' }}
               >
-                <h3 style={{ marginBottom: '1rem' }}>Attach Photo Evidence</h3>
-                <p style={{ color: 'var(--clr-text-light)', marginBottom: '2.5rem' }}>
-                  Adding a photo helps authorities understand the severity and location of the issue faster.
-                </p>
-
-                {!imagePreview ? (
-                  <label className="photo-upload-zone">
-                    <input type="file" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-                      <div style={{ 
-                        width: '64px', 
-                        height: '64px', 
-                        borderRadius: '50%', 
-                        backgroundColor: 'var(--clr-primary-ultra)', 
-                        color: 'var(--clr-primary)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <Upload size={32} />
-                      </div>
-                      <div>
-                        <p style={{ fontWeight: 700, color: 'var(--clr-text)' }}>Click to upload or take a photo</p>
-                        <p style={{ fontSize: '0.85rem' }}>PNG, JPG or JPEG (Max 5MB)</p>
-                      </div>
-                    </div>
-                  </label>
-                ) : (
-                  <div style={{ position: 'relative', maxWidth: '400px', margin: '0 auto' }}>
-                    <img 
-                      src={imagePreview} 
-                      alt="Preview" 
-                      style={{ width: '100%', borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-md)', maxHeight: '300px', objectFit: 'cover' }} 
-                    />
-                    <button 
-                      onClick={() => { setImageFile(null); setImagePreview(null); }}
-                      style={{ 
-                        position: 'absolute', 
-                        top: '-10px', 
-                        right: '-10px', 
-                        backgroundColor: 'var(--clr-error)', 
-                        color: 'white', 
-                        border: 'none', 
-                        borderRadius: '50%', 
-                        width: '32px', 
-                        height: '32px', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        boxShadow: 'var(--shadow-md)'
-                      }}
-                    >
-                      <X size={18} />
-                    </button>
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', gap: '1rem', marginTop: '3rem' }}>
-                  <button onClick={prevStep} className="btn btn-outline" style={{ flex: 1 }}>
-                    <ChevronLeft size={18} /> Back
-                  </button>
-                  <button onClick={nextStep} className="btn btn-primary" style={{ flex: 1.5 }}>
-                    {imageFile ? 'Looks Good' : 'Skip & Continue'} <ChevronRight size={18} />
-                  </button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* STEP 4: DETAILS */}
-            {step === 4 && (
-              <motion.div 
-                key="step4"
-                variants={stepVariants}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-              >
-                <h3 style={{ textAlign: 'center', marginBottom: '2rem' }}>Final Details</h3>
+                <h3 style={{ textAlign: 'center', marginBottom: '2rem' }}>{t('report.step3')}</h3>
                 
                 <div className="form-group">
-                  <label className="form-label">Issue Title</label>
+                  <label className="form-label">{t('report.issueTitle')}</label>
                   <input 
                     type="text" 
                     className="form-control" 
-                    placeholder="Briefly describe the problem (e.g. Large Pothole on main road)"
+                    placeholder={t('report.titlePlaceholder')}
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     required
@@ -460,11 +468,11 @@ const Report = () => {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Detailed Description</label>
+                  <label className="form-label">{t('report.issueDesc')}</label>
                   <textarea 
                     className="form-control" 
                     rows="6"
-                    placeholder="Provide more details to help us identify the exact problem..."
+                    placeholder={t('report.descPlaceholder')}
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     required
@@ -474,7 +482,7 @@ const Report = () => {
 
                 <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
                   <button onClick={prevStep} className="btn btn-outline" style={{ flex: 1 }}>
-                    <ChevronLeft size={18} /> Back
+                    <ChevronLeft size={18} /> {t('report.back')}
                   </button>
                   <button 
                     onClick={handleSubmit} 
@@ -484,11 +492,11 @@ const Report = () => {
                   >
                     {submitting ? (
                       <>
-                        <Loader2 className="spinner" size={18} /> Submitting...
+                        <Loader2 className="spinner" size={18} /> {t('report.submitting')}
                       </>
                     ) : (
                       <>
-                        <CheckCircle2 size={18} /> Submit Official Report
+                        <CheckCircle2 size={18} /> {t('report.submit')}
                       </>
                     )}
                   </button>

@@ -2,23 +2,23 @@
 
 /* ============================================================
    PROFESSIONAL COLOR SYSTEM — HSL DEGREES
-   Primary: Red-Crimson (Tunisian Flag inspired)
+   Primary: Indigo/Blue (Professional)
    Neutral: Slate-Navy for depth
    Accent: Amber for warnings/CTAs
 ============================================================ */
 :root {
   /* Primary Hue Degrees */
-  --h-primary: 354;          /* Red-Crimson */
+  --h-primary: 226;          /* Professional Indigo/Blue */
   --h-navy: 222;             /* Deep Slate-Navy */
   --h-amber: 38;             /* Amber/Gold */
   --h-emerald: 160;          /* Success Green */
 
-  /* Primary (Crimson/Red) Palette */
-  --clr-primary:       hsl(var(--h-primary), 92%, 45%);
-  --clr-primary-light: hsl(var(--h-primary), 92%, 58%);
-  --clr-primary-dark:  hsl(var(--h-primary), 92%, 35%);
-  --clr-primary-glow:  hsla(var(--h-primary), 92%, 45%, 0.15);
-  --clr-primary-ultra: hsla(var(--h-primary), 92%, 45%, 0.07);
+  /* Primary (Indigo/Blue) Palette */
+  --clr-primary:       hsl(var(--h-primary), 92%, 60%);
+  --clr-primary-light: hsl(var(--h-primary), 92%, 70%);
+  --clr-primary-dark:  hsl(var(--h-primary), 92%, 45%);
+  --clr-primary-glow:  hsla(var(--h-primary), 92%, 60%, 0.15);
+  --clr-primary-ultra: hsla(var(--h-primary), 92%, 60%, 0.07);
 
   /* Navy/Depth Palette */
   --clr-navy:         hsl(var(--h-navy), 47%, 11%);   /* darkest */
@@ -87,14 +87,36 @@
   --trans-lg:  all 0.5s var(--ease);
 
   /* Gradients */
-  --grad-primary:       linear-gradient(135deg, hsl(var(--h-primary), 92%, 50%) 0%, hsl(var(--h-primary), 80%, 38%) 100%);
+  --grad-primary:       linear-gradient(135deg, hsl(var(--h-primary), 92%, 60%) 0%, hsl(var(--h-primary), 80%, 48%) 100%);
   --grad-navy:          linear-gradient(135deg, hsl(var(--h-navy), 47%, 11%) 0%, hsl(var(--h-navy), 38%, 18%) 100%);
-  --grad-hero:          linear-gradient(160deg, hsl(var(--h-navy), 47%, 9%) 0%, hsl(var(--h-navy), 38%, 16%) 55%, hsl(var(--h-primary), 50%, 18%) 100%);
+  --grad-hero:          linear-gradient(160deg, hsl(var(--h-navy), 47%, 9%) 0%, hsl(var(--h-navy), 38%, 16%) 55%, hsl(var(--h-primary), 50%, 40%) 100%);
   --grad-surface:       linear-gradient(180deg, hsl(220, 22%, 100%) 0%, hsl(220, 18%, 97%) 100%);
-  --grad-card-hover:    linear-gradient(135deg, hsla(var(--h-primary), 92%, 45%, 0.04) 0%, hsla(var(--h-primary), 60%, 55%, 0.02) 100%);
-  --grad-text-primary:  linear-gradient(135deg, hsl(var(--h-primary), 92%, 50%), hsl(var(--h-primary), 70%, 35%));
+  --grad-card-hover:    linear-gradient(135deg, hsla(var(--h-primary), 92%, 60%, 0.04) 0%, hsla(var(--h-primary), 60%, 65%, 0.02) 100%);
+  --grad-text-primary:  linear-gradient(135deg, hsl(var(--h-primary), 92%, 65%), hsl(var(--h-primary), 70%, 45%));
   --grad-text-white:    linear-gradient(135deg, #ffffff 0%, hsla(0,0%,100%,0.7) 100%);
 }
+
+[data-theme='dark'] {
+  --clr-bg:          hsl(222, 47%, 7%);
+  --clr-bg-raised:   hsl(222, 40%, 16%);
+  --clr-surface:     hsl(222, 40%, 14%);
+  --clr-border:      hsl(222, 30%, 20%);
+  --clr-text:        hsl(220, 20%, 98%);
+  --clr-text-light:  hsl(222, 15%, 80%);
+  --clr-text-muted:  hsl(222, 12%, 60%);
+  --clr-white:       hsl(222, 40%, 16%);
+
+  --grad-surface:    linear-gradient(180deg, hsl(222, 40%, 16%) 0%, hsl(222, 40%, 13%) 100%);
+  --glass-bg:        hsla(var(--h-navy), 47%, 11%, 0.72);
+  --glass-border:    hsla(0, 0%, 100%, 0.1);
+
+  --shadow-xs:  0 1px 3px hsla(0, 0%, 0%, 0.3);
+  --shadow-sm:  0 4px 12px hsla(0, 0%, 0%, 0.4);
+  --shadow-md:  0 8px 28px hsla(0, 0%, 0%, 0.5), 0 2px 8px hsla(0, 0%, 0%, 0.3);
+
+  --clr-border-hover:hsl(var(--h-primary), 50%, 50%);
+}
+
 
 /* ============================================================
    RESET & BASE
@@ -333,7 +355,7 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: var(--shadow-lg);
   border-color: var(--clr-primary-glow);
   transform: translateY(-4px);
-  background: linear-gradient(135deg, var(--clr-surface) 0%, hsla(var(--h-primary), 80%, 98%, 0.5) 100%);
+  background: linear-gradient(135deg, var(--clr-surface) 0%, var(--clr-bg-raised) 100%);
 }
 
 /* ============================================================
@@ -583,6 +605,10 @@ select.form-control {
   padding-right: 2.5rem;
 }
 
+[data-theme='dark'] select.form-control {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
 /* ============================================================
    TABS
 ============================================================ */
@@ -706,7 +732,8 @@ select.form-control {
   animation: fadeIn 0.25s var(--ease);
 }
 
-.modal-box {
+.modal-box,
+.modal-content {
   background: var(--clr-surface);
   border-radius: var(--r-xl);
   box-shadow: var(--shadow-xl);

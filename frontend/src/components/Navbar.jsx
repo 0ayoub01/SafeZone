@@ -1,7 +1,11 @@
+import { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, Map, Search, User, Shield, Users, LogOut,
-  Plus, Menu, X, AlertTriangle, ChevronDown, Globe
+  Plus, Menu, X, AlertTriangle, Moon, Sun, ShieldCheck
 } from 'lucide-react';
 
 const Navbar = () => {
@@ -11,11 +15,15 @@ const Navbar = () => {
   const { currentUser, isAdmin, canModerate, logout } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [langOpen, setLangOpen] = useState(false);
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
 
-  const toggleLanguage = (lang) => {
-    i18n.changeLanguage(lang);
-    setLangOpen(false);
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
   };
 
   useEffect(() => {
@@ -39,7 +47,8 @@ const Navbar = () => {
     { label: t('nav.home'),     path: '/',         icon: Home },
     { label: t('nav.browse'),   path: '/browse',   icon: Search },
     { label: t('nav.map'),      path: '/map',       icon: Map },
-    { label: t('nav.municipal'),path: '/authorities', icon: ShieldCheck },
+    { label: t('nav.admin'),           path: '/admin',    icon: Shield, admin: true },
+    { label: t('nav.moderator'),       path: '/moderator', icon: Shield, moderate: true },
     { label: t('nav.emergency'),path: '/emergency', icon: AlertTriangle },
     { label: t('nav.profile'),  path: '/profile',   icon: User,   auth: true },
   ].filter(link => {
@@ -75,14 +84,12 @@ const Navbar = () => {
     <header style={navStyle}>
       <div style={{
         background: scrolled
-          ? 'hsla(220, 20%, 100%, 0.88)'
-          : 'hsla(220, 20%, 100%, 0.95)',
+          ? 'var(--glass-bg)'
+          : 'var(--glass-bg)',
         backdropFilter: 'blur(18px) saturate(180%)',
         WebkitBackdropFilter: 'blur(18px) saturate(180%)',
-        borderBottom: scrolled
-          ? '1px solid hsl(220, 20%, 90%)'
-          : '1px solid hsl(220, 20%, 93%)',
-        boxShadow: scrolled ? '0 4px 24px hsla(222,30%,12%,0.08)' : 'none',
+        borderBottom: '1px solid var(--clr-border)',
+        boxShadow: scrolled ? 'var(--shadow-sm)' : 'none',
         transition: 'all 0.35s cubic-bezier(0.4,0,0.2,1)',
       }}>
         <nav style={innerStyle}>
@@ -92,13 +99,15 @@ const Navbar = () => {
               width: '36px',
               height: '36px',
               borderRadius: '10px',
-              background: 'linear-gradient(135deg, hsl(354,92%,45%), hsl(354,92%,35%))',
+              background: 'var(--grad-primary)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '1.1rem',
-              boxShadow: '0 4px 14px hsla(354,92%,45%,0.35)',
-            }}>🛡️</div>
+              boxShadow: 'var(--shadow-glow)',
+            }}>
+              <ShieldCheck size={20} color="white" strokeWidth={2.5} />
+            </div>
             <span style={{
               fontFamily: 'var(--font-heading)',
               fontWeight: 800,
@@ -141,55 +150,18 @@ const Navbar = () => {
 
           {/* CTA Buttons */}
           <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            {/* Language Switcher */}
-            <div style={{ position: 'relative' }}>
-              <button 
-                onClick={() => setLangOpen(!langOpen)}
-                className="btn btn-ghost btn-sm"
-                style={{ gap: '0.4rem', color: 'var(--clr-text-light)' }}
-              >
-                <Globe size={16} />
-                <span style={{ textTransform: 'uppercase', fontWeight: 700, fontSize: '0.75rem' }}>{i18n.language}</span>
-                <ChevronDown size={14} style={{ transform: langOpen ? 'rotate(180deg)' : 'none', transition: '0.2s' }} />
-              </button>
-              
-              <AnimatePresence>
-                {langOpen && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    style={{ 
-                      position: 'absolute', top: '100%', right: 0, marginTop: '0.5rem',
-                      background: 'white', border: '1px solid var(--clr-border)', 
-                      borderRadius: 'var(--r-md)', boxShadow: 'var(--shadow-xl)',
-                      padding: '0.5rem', minWidth: '120px', zIndex: 1100
-                    }}
-                  >
-                    {[
-                      { code: 'en', label: 'English' },
-                      { code: 'fr', label: 'Français' },
-                      { code: 'ar', label: 'العربية' }
-                    ].map(l => (
-                      <button 
-                        key={l.code}
-                        onClick={() => toggleLanguage(l.code)}
-                        style={{ 
-                          width: '100%', padding: '0.5rem 0.75rem', borderRadius: 'var(--r-sm)',
-                          textAlign: i18n.dir() === 'rtl' ? 'right' : 'left', border: 'none', background: i18n.language === l.code ? 'var(--clr-primary-ultra)' : 'transparent',
-                          color: i18n.language === l.code ? 'var(--clr-primary)' : 'var(--clr-text)',
-                          fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer'
-                        }}
-                      >
-                        {l.label}
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
 
-            <div style={{ width: '1px', height: '20px', background: 'var(--clr-border)' }} />
+            {/* Dark Mode Toggle */}
+            <button 
+              onClick={toggleTheme}
+              className="btn btn-ghost btn-sm"
+              style={{ padding: '0.4rem', color: 'var(--clr-text-light)' }}
+              title="Toggle Theme"
+            >
+              {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+            </button>
+
+            <div style={{ width: '1px', height: '20px', background: 'var(--clr-border)', margin: '0 0.25rem' }} />
 
             {currentUser ? (
               <>
@@ -208,7 +180,7 @@ const Navbar = () => {
               </>
             ) : (
               <Link to="/login" className="btn btn-primary btn-sm">
-                Get Started
+                {t('nav.login')}
               </Link>
             )}
           </div>
@@ -229,7 +201,7 @@ const Navbar = () => {
           <div style={{
             padding: '1rem 1.25rem 1.5rem',
             borderTop: '1px solid var(--clr-border)',
-            background: 'hsla(220, 20%, 100%, 0.98)',
+            background: 'var(--clr-surface)',
             animation: 'slideDown 0.25s var(--ease)',
           }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
@@ -261,15 +233,24 @@ const Navbar = () => {
               {currentUser ? (
                 <>
                   <Link to="/report" className="btn btn-primary" style={{ marginBottom: '0.5rem' }}>
-                    <Plus size={16} /> Report an Issue
+                    <Plus size={16} /> {t('nav.report')}
                   </Link>
                   <button onClick={handleLogout} className="btn btn-outline" style={{ gap: '0.5rem' }}>
-                    <LogOut size={15} /> Logout
+                    <LogOut size={15} /> {t('nav.logout')}
                   </button>
                 </>
               ) : (
-                <Link to="/login" className="btn btn-primary">Get Started</Link>
+                <Link to="/login" className="btn btn-primary">{t('nav.login')}</Link>
               )}
+              <hr style={{ margin: '0.5rem 0', borderColor: 'var(--clr-border)' }} />
+              <button 
+                onClick={toggleTheme} 
+                className="btn btn-outline" 
+                style={{ width: '100%', gap: '0.5rem' }}
+              >
+                {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+                {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
+              </button>
             </div>
           </div>
         )}

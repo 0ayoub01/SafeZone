@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { 
   collection, 
   query, 
@@ -16,6 +17,7 @@ import {
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { tunisianLocations } from '../data/locations';
 import { 
   MapPin, 
   Calendar, 
@@ -33,18 +35,23 @@ import {
   Zap,
   Share2,
   Copy,
-  Send
+  Send,
+  ShieldCheck
 } from 'lucide-react';
 
 const Browse = () => {
-  const { currentUser } = useAuth();
+  const { t } = useTranslation();
+  const { currentUser, userProfile } = useAuth();
+  const navigate = useNavigate();
   const [reports, setReports] = useState([]);
   const [cityFilter, setCityFilter] = useState('');
+  const [delegationFilter, setDelegationFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedReport, setSelectedReport] = useState(null);
   const [updatingUpvote, setUpdatingUpvote] = useState(null);
+  const { id } = useParams();
   
   // Comment state
   const [comments, setComments] = useState([]);
@@ -52,16 +59,11 @@ const Browse = () => {
   const [postingComment, setPostingComment] = useState(false);
 
   const categories = ['Roads', 'Lighting', 'Sanitation', 'Water', 'Other'];
-  const tunisCities = [
-    "Ariana", "Béja", "Ben Arous", "Bizerte", "Gabès", "Gafsa", "Jendouba", 
-    "Kairouan", "Kasserine", "Kébili", "Kef", "Mahdia", "Manouba", "Médenine", 
-    "Monastir", "Nabeul", "Sfax", "Sidi Bouzid", "Siliana", "Sousse", 
-    "Tataouine", "Tozeur", "Tunis", "Zaghouan"
-  ];
+  const tunisCities = Object.keys(tunisianLocations);
 
   useEffect(() => {
     fetchReports();
-  }, [cityFilter, categoryFilter]);
+  }, [cityFilter, categoryFilter, delegationFilter]);
 
   useEffect(() => {
     if (selectedReport) {
@@ -77,13 +79,20 @@ const Browse = () => {
       let constraints = [];
       
       if (cityFilter) constraints.push(where('city', '==', cityFilter));
+      if (delegationFilter) constraints.push(where('neighborhood', '==', delegationFilter));
       if (categoryFilter) constraints.push(where('category', '==', categoryFilter));
       
       constraints.push(orderBy('createdAt', 'desc'));
       
       const finalQuery = query(q, ...constraints);
       const snapshot = await getDocs(finalQuery);
-      setReports(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const fetchedReports = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setReports(fetchedReports);
+      
+      if (id && !selectedReport) {
+        const target = fetchedReports.find(r => r.id === id);
+        if (target) setSelectedReport(target);
+      }
     } catch (err) {
       console.error(err);
       if (err.code === 'failed-precondition') {
@@ -142,7 +151,7 @@ const Browse = () => {
       const commentData = {
         text: commentText,
         userId: currentUser.uid,
-        userName: currentUser.displayName || 'Verified Citizen',
+        userName: userProfile?.fullName || currentUser.displayName || null,
         createdAt: serverTimestamp()
       };
       
@@ -175,10 +184,9 @@ const Browse = () => {
 
   const getStatusInfo = (status) => {
     switch (status) {
-      case 'Reported': return { label: 'New', color: 'var(--clr-warning)', icon: AlertCircle, bg: 'rgba(245,158,11,0.1)' };
-      case 'Under Review': return { label: 'Review', color: 'var(--clr-info)', icon: Clock, bg: 'rgba(59,130,246,0.1)' };
-      case 'In Progress': return { label: 'Active', color: 'hsl(var(--h-amber), 92%, 48%)', icon: Zap, bg: 'rgba(245,158,11,0.1)' };
-      case 'Resolved': return { label: 'Solved', color: 'var(--clr-success)', icon: CheckCircle2, bg: 'rgba(16,185,129,0.1)' };
+      case 'Reported': return { label: t('browse.statusReported') || 'Reported', color: 'var(--clr-warning)', icon: AlertCircle, bg: 'rgba(245,158,11,0.1)' };
+      case 'In Progress': return { label: t('browse.statusActive') || 'Active', color: 'hsl(var(--h-amber), 92%, 48%)', icon: Zap, bg: 'rgba(245,158,11,0.1)' };
+      case 'Resolved': return { label: t('browse.statusSolved') || 'Solved', color: 'var(--clr-success)', icon: CheckCircle2, bg: 'rgba(16,185,129,0.1)' };
       case 'Rejected': return { label: 'Closed', color: 'var(--clr-error)', icon: X, bg: 'rgba(239, 68, 68, 0.1)' };
       default: return { label: status, color: 'var(--clr-text-muted)', icon: Info, bg: 'var(--clr-bg-raised)' };
     }
@@ -195,10 +203,9 @@ const Browse = () => {
       <div className="container">
         <header style={{ textAlign: 'center', marginBottom: '4rem' }}>
           <div className="section-label">Citizen Reports</div>
-          <h2 className="section-title">Community Dashboard</h2>
+          <h2 className="section-title">{t('browse.title')}</h2>
           <p className="section-subtitle">
-            Stay informed about issues in your district. Upvote reports to increase their visibility 
-            to local authorities and track their resolution progress.
+            {t('browse.subtitle')}
           </p>
 
           <div style={{ 
@@ -208,27 +215,40 @@ const Browse = () => {
             flexWrap: 'wrap',
             marginTop: '3rem',
             padding: '1.5rem',
-            backgroundColor: 'var(--clr-white)',
+            backgroundColor: 'var(--clr-surface)',
             borderRadius: 'var(--r-xl)',
             boxShadow: 'var(--shadow-md)',
             border: '1px solid var(--clr-border)',
             maxWidth: '900px',
             margin: '3rem auto 0'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: '200px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 'min(100%, 180px)' }}>
               <MapPin size={18} color="var(--clr-primary)" />
-              <select 
-                className="form-control" 
-                style={{ border: 'none', padding: '0', height: 'auto', fontWeight: 600 }}
-                value={cityFilter}
-                onChange={(e) => setCityFilter(e.target.value)}
-              >
-                <option value="">All Tunisia</option>
-                {tunisCities.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                <select 
+                  className="form-control" 
+                  style={{ border: 'none', padding: '0', height: 'auto', fontWeight: 600, fontSize: '0.85rem' }}
+                  value={cityFilter}
+                  onChange={(e) => { setCityFilter(e.target.value); setDelegationFilter(''); }}
+                >
+                  <option value="">All Governorates</option>
+                  {tunisCities.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                {cityFilter && (
+                  <select 
+                    className="form-control" 
+                    style={{ border: 'none', padding: '0', height: 'auto', fontWeight: 500, fontSize: '0.75rem', color: 'var(--clr-text-muted)' }}
+                    value={delegationFilter}
+                    onChange={(e) => setDelegationFilter(e.target.value)}
+                  >
+                    <option value="">All Delegations</option>
+                    {(tunisianLocations[cityFilter] || []).map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                )}
+              </div>
             </div>
             <div style={{ width: '1px', backgroundColor: 'var(--clr-border)', height: '24px', alignSelf: 'center' }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: '200px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 0.8, minWidth: 'min(100%, 150px)' }}>
               <Tag size={18} color="var(--clr-primary)" />
               <select 
                 className="form-control" 
@@ -236,8 +256,8 @@ const Browse = () => {
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
               >
-                <option value="">All Categories</option>
-                {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                <option value="">{t('browse.filterCategory')}</option>
+                {categories.map(c => <option key={c} value={c}>{t(`category.${c}`)}</option>)}
               </select>
             </div>
             <button className="btn btn-primary" onClick={fetchReports} style={{ padding: '0.6rem 1rem' }}>
@@ -255,9 +275,8 @@ const Browse = () => {
         ) : reports.length === 0 ? (
           <div className="card" style={{ textAlign: 'center', padding: '5rem 2rem', borderStyle: 'dashed', maxWidth: '600px', margin: '0 auto' }}>
             <Search size={48} color="var(--clr-text-muted)" style={{ marginBottom: '1.5rem' }} />
-            <h3>No reports found</h3>
-            <p style={{ color: 'var(--clr-text-muted)', marginBottom: '1.5rem' }}>We couldn't find any reports matching your current filters.</p>
-            <button className="btn btn-outline" onClick={() => { setCityFilter(''); setCategoryFilter(''); }}>Reset All Filters</button>
+            <p style={{ color: 'var(--clr-text-muted)', marginBottom: '1.5rem', fontWeight: 600 }}>{t('browse.noReports')}</p>
+            <button className="btn btn-outline" onClick={() => { setCityFilter(''); setCategoryFilter(''); setDelegationFilter(''); }}>Reset</button>
           </div>
         ) : (
           <motion.div layout className="grid-3" style={{ marginBottom: '4rem' }}>
@@ -277,25 +296,15 @@ const Browse = () => {
                     style={{ position: 'relative', overflow: 'hidden', padding: '0', display: 'flex', flexDirection: 'column' }}
                     whileHover={{ y: -5 }}
                   >
-                    <div style={{ height: '180px', position: 'relative', overflow: 'hidden', backgroundColor: 'var(--clr-bg-raised)' }}>
-                      {report.imageUrl ? (
-                        <img src={report.imageUrl} alt={report.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.2 }}>
-                          <Tag size={48} />
-                        </div>
-                      )}
-                      <div style={{ position: 'absolute', top: '1rem', right: '1rem' }}>
-                        <span className="badge" style={{ backgroundColor: status.bg, backdropFilter: 'blur(8px)', color: status.color, border: '1px solid rgba(255,255,255,0.1)' }}>
-                          <status.icon size={12} style={{ marginRight: '0.4rem' }} />
-                          {status.label}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                         <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--clr-primary)', textTransform: 'uppercase' }}>{report.category}</div>
+                    <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                           <span className="badge" style={{ backgroundColor: status.bg, color: status.color, alignSelf: 'flex-start', padding: '0.3rem 0.6rem' }}>
+                             <status.icon size={12} style={{ marginRight: '0.4rem' }} />
+                             {status.label}
+                           </span>
+                           <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--clr-primary)', textTransform: 'uppercase' }}>{t(`category.${report.category}`)}</div>
+                         </div>
                          <div style={{ fontSize: '0.75rem', color: 'var(--clr-text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                             <Clock size={12} /> {formatDate(report.createdAt)}
                          </div>
@@ -327,17 +336,26 @@ const Browse = () => {
                             <ThumbsUp size={16} fill={isUpvoted ? 'var(--clr-primary)' : 'none'} />
                             {report.upvotes?.length || 0}
                           </button>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: 'var(--clr-text-muted)' }}>
+                          <button
+                            onClick={() => {
+                              setSelectedReport(report);
+                              navigate(`/browse/${report.id}`);
+                            }}
+                            style={{ background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: 'var(--clr-text-muted)', cursor: 'pointer' }}
+                          >
                             <MessageSquare size={16} />
                             {report.commentCount || 0}
-                          </div>
+                          </button>
                         </div>
                         <button 
                           className="btn btn-ghost btn-sm" 
-                          onClick={() => setSelectedReport(report)}
+                          onClick={() => {
+                            setSelectedReport(report);
+                            navigate(`/browse/${report.id}`);
+                          }}
                           style={{ color: 'var(--clr-primary)', fontWeight: 800 }}
                         >
-                          Details <ChevronRight size={14} />
+                          {t('browse.details')} <ChevronRight size={14} />
                         </button>
                       </div>
                     </div>
@@ -353,32 +371,24 @@ const Browse = () => {
         {selectedReport && (
           <motion.div 
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="modal-overlay" onClick={() => setSelectedReport(null)}
+            className="modal-overlay" onClick={() => { setSelectedReport(null); navigate('/browse'); }}
           >
             <motion.div 
               initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }}
               className="modal-content card-premium" style={{ padding: '0', maxWidth: '1000px', width: '95%', overflow: 'hidden' }}
               onClick={e => e.stopPropagation()}
             >
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', maxHeight: '90vh' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 350px), 1fr))', maxHeight: '90vh' }}>
                 {/* Modal Left */}
                 <div style={{ backgroundColor: 'var(--clr-bg-raised)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-                  <div style={{ height: '350px', position: 'relative', flexShrink: 0 }}>
-                    {selectedReport.imageUrl ? (
-                      <img src={selectedReport.imageUrl} alt="Evidence" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--clr-text-muted)', gap: '1rem' }}>
-                        <Tag size={64} style={{ opacity: 0.1 }} />
-                        <p style={{ fontSize: '0.9rem', opacity: 0.5 }}>No photo evidence</p>
-                      </div>
-                    )}
-                    <button onClick={() => setSelectedReport(null)} className="modal-close" style={{ top: '1rem', left: '1rem' }}>
-                      <X size={20} />
+                  <div style={{ padding: '2.5rem', flex: 1, position: 'relative' }}>
+                    <button 
+                      onClick={() => { setSelectedReport(null); navigate('/browse'); }} 
+                      style={{ position: 'absolute', top: '1rem', left: '1rem', background: 'none', border: 'none', color: 'var(--clr-text-muted)', cursor: 'pointer', padding: '0.5rem' }}
+                    >
+                      <X size={24} />
                     </button>
-                  </div>
-                  
-                  <div style={{ padding: '2.5rem', flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', marginTop: '1.5rem' }}>
                       <span className="badge" style={{ backgroundColor: getStatusInfo(selectedReport.status).bg, color: getStatusInfo(selectedReport.status).color }}>
                         {selectedReport.status}
                       </span>
@@ -403,8 +413,8 @@ const Browse = () => {
 
                     <div style={{ borderTop: '1px solid var(--clr-border)', paddingTop: '1.5rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative' }}>
-                        {['Reported', 'Review', 'Active', 'Solved'].map((lbl, idx) => {
-                           const steps = ['Reported', 'Under Review', 'In Progress', 'Resolved'];
+                        {[t('browse.statusReported'), t('browse.statusActive'), t('browse.statusSolved')].map((lbl, idx) => {
+                           const steps = ['Reported', 'In Progress', 'Resolved'];
                            const isDone = steps.indexOf(selectedReport.status) >= idx;
                            return (
                             <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1, flex: 1 }}>
@@ -438,15 +448,19 @@ const Browse = () => {
                     {comments.length === 0 ? (
                       <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--clr-text-muted)' }}>
                         <MessageSquare size={32} style={{ opacity: 0.1, marginBottom: '1rem' }} />
-                        <p style={{ fontSize: '0.9rem' }}>No discussions yet.</p>
+                        <p style={{ fontSize: '0.9rem' }}>{t('browse.noComments')}</p>
                       </div>
                     ) : (
                       comments.map((c) => (
                         <div key={c.id} style={{ display: 'flex', gap: '1rem' }}>
-                          <div className="avatar avatar-sm">{c.userName?.charAt(0) || 'U'}</div>
+                          <div className="avatar avatar-sm">
+                            {c.userName && c.userName !== 'Verified Citizen' ? c.userName.charAt(0).toUpperCase() : 'V'}
+                          </div>
                           <div style={{ flex: 1 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                              <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>{c.userName}</span>
+                              <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>
+                                {c.userName === 'Verified Citizen' || !c.userName ? t('profile.verifiedCit') : c.userName}
+                              </span>
                               <span style={{ fontSize: '0.7rem', color: 'var(--clr-text-muted)' }}>{formatDate(c.createdAt)}</span>
                             </div>
                             <p style={{ fontSize: '0.9rem', color: 'var(--clr-text-light)', lineHeight: '1.5' }}>{c.text}</p>
@@ -460,7 +474,7 @@ const Browse = () => {
                     {currentUser ? (
                       <form onSubmit={postComment} style={{ display: 'flex', gap: '0.75rem' }}>
                         <input 
-                          type="text" className="form-control" placeholder="Write a comment..." 
+                          type="text" className="form-control" placeholder={t('browse.writeComment') || "Write a comment..."}
                           value={commentText} onChange={(e) => setCommentText(e.target.value)}
                           required style={{ borderRadius: 'var(--r-md)', padding: '0.75rem 1rem' }}
                         />
