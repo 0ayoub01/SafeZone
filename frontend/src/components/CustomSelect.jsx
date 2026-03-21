@@ -23,9 +23,8 @@ const CustomSelect = ({ value, onChange, options, placeholder, icon: Icon, class
         style={{ 
           display: 'flex', 
           alignItems: 'center', 
-          justifyContent: 'space-between', 
           cursor: disabled ? 'not-allowed' : 'pointer',
-          paddingLeft: Icon ? '3rem' : '1rem',
+          padding: '0.75rem 1rem',
           userSelect: 'none',
           opacity: disabled ? 0.6 : 1,
           width: '100%',
@@ -35,14 +34,16 @@ const CustomSelect = ({ value, onChange, options, placeholder, icon: Icon, class
         onClick={() => !disabled && setIsOpen(!isOpen)}
       >
         {Icon && (
-          <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--clr-text-muted)', display: 'flex' }}>
+          <div style={{ color: 'var(--clr-text-muted)', display: 'flex', marginRight: '0.75rem', flexShrink: 0 }}>
             <Icon size={18} />
-          </span>
+          </div>
         )}
-        <span style={{ color: value ? 'var(--clr-text)' : 'var(--clr-text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <div style={{ flex: 1, textAlign: 'left', color: value ? 'var(--clr-text)' : 'var(--clr-text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {options.find(o => (typeof o === 'object' ? o.value === value : o === value))?.label || value || placeholder}
-        </span>
-        <ChevronDown size={16} color="var(--clr-text-muted)" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }} />
+        </div>
+        <div style={{ marginLeft: '0.5rem', display: 'flex', flexShrink: 0 }}>
+          <ChevronDown size={16} color="var(--clr-text-muted)" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }} />
+        </div>
       </div>
 
       <AnimatePresence>
