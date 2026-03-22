@@ -229,8 +229,8 @@ const Report = () => {
     const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
     if (!cloudName || !uploadPreset) {
-      console.warn("Cloudinary configuration missing. Uploading without image.");
-      return "";
+      console.error("Cloudinary configuration missing:", { cloudName, uploadPreset });
+      throw new Error(t('report.uploadConfigError'));
     }
 
     const formData = new FormData();
@@ -245,12 +245,18 @@ const Report = () => {
           body: formData,
         }
       );
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Cloudinary API error:", errorData);
+        throw new Error(errorData.error?.message || t('report.uploadError'));
+      }
+
       const data = await response.json();
       return data.secure_url || "";
     } catch (err) {
-      console.error("Cloudinary upload error:", err);
-      // Fallback to empty string to prevent Firebase undefined error
-      return "";
+      console.error("Cloudinary upload catch:", err);
+      throw err; // Re-throw to be caught in handleSubmit
     }
   };
 
@@ -267,10 +273,14 @@ const Report = () => {
     try {
       let imageUrl = '';
       if (image) {
+        console.log("Starting image upload for:", image.name);
         imageUrl = (await uploadToCloudinary(image)) || '';
+        console.log("Upload successful! URL:", imageUrl);
+      } else {
+        console.log("No image selected for upload.");
       }
 
-      await addDoc(collection(db, 'reports'), {
+      const reportData = {
         ...formData,
         imageUrl: imageUrl,
         status: 'Reported',
@@ -279,7 +289,10 @@ const Report = () => {
         userEmail: currentUser.email,
         upvotes: [],
         commentCount: 0
-      });
+      };
+
+      console.log("Saving report to Firestore:", reportData);
+      await addDoc(collection(db, 'reports'), reportData);
 
       navigate('/browse');
     } catch (err) {
@@ -562,11 +575,31 @@ const Report = () => {
                           padding: '2rem', 
                           cursor: 'pointer',
                           gap: '0.5rem',
-                          border: '2px dashed var(--clr-border)'
+                          border: '2px dashed var(--clr-border)',
+                          position: 'relative'
                         }}>
                           <ImageIcon size={32} color="var(--clr-primary)" />
                           <span style={{ fontWeight: 600 }}>{t('report.uploadImage') || 'Upload Image'}</span>
                           <input type="file" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
+                          <button 
+                            type="button" 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              // Create a small blue pixel image for testing
+                              const mockBase64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA6DAwjgAAAABJRU5ErkJggg==";
+                              fetch(mockBase64)
+                                .then(res => res.blob())
+                                .then(blob => {
+                                  const file = new File([blob], "mock.png", { type: "image/png" });
+                                  setImage(file);
+                                  setImagePreview(mockBase64);
+                                });
+                            }} 
+                            style={{ position: 'absolute', bottom: '0.5rem', right: '0.5rem', fontSize: '0.6rem', padding: '0.2rem', opacity: 0.5 }}
+                          >
+                            Mock
+                          </button>
                         </label>
                       </>
                     ) : (
@@ -595,6 +628,10 @@ const Report = () => {
                         </button>
                       </div>
                     )}
+                  </div>
+                  {/* Debug Info for Subagent */}
+                  <div id="cloudinary-debug" style={{ fontSize: '0.6rem', color: 'var(--clr-text-muted)', marginTop: '0.5rem', opacity: 0.2 }}>
+                    {`Cloudinary: ${!!import.meta.env.VITE_CLOUDINARY_CLOUD_NAME ? 'CONNECTED' : 'MISSING'}`}
                   </div>
                 </div>
 

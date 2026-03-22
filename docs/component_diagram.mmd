@@ -1,0 +1,18 @@
+graph LR
+    subgraph "Presentation Layer (React)"
+        UI[Interfaces Utilisateur]
+        Comp[Composants UI]
+    end
+    
+    subgraph "Business Layer (Node/Express)"
+        API[Endpoints API / Gateway]
+        Logic[Business Logic / Services]
+    end
+    
+    subgraph "Data Persistence Layer (MongoDB)"
+        DB[(Base de Données)]
+    end
+    
+    UI <--> API
+    API <--> Logic
+    Logic <--> DB

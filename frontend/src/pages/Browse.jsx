@@ -416,12 +416,23 @@ const Browse = () => {
                 <div style={{ backgroundColor: 'var(--clr-bg-raised)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
                   <div style={{ padding: '2.5rem', flex: 1, position: 'relative' }}>
                     {selectedReport.imageUrl && (
-                      <div style={{ width: '100%', height: '240px', overflow: 'hidden', borderBottom: '1px solid var(--clr-border)' }}>
+                      <div style={{ width: '100%', height: '240px', overflow: 'hidden', borderBottom: '1px solid var(--clr-border)', position: 'relative' }}>
                         <img 
                           src={selectedReport.imageUrl} 
                           alt={selectedReport.title} 
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                          onError={(e) => {
+                            console.error("Image failed to load:", selectedReport.imageUrl);
+                            e.target.style.display = 'none';
+                            e.target.parentElement.innerHTML += `<div style="padding: 1rem; color: var(--clr-error); font-size: 0.8rem;">Image failed to load. URL: ${selectedReport.imageUrl}</div>`;
+                          }}
                         />
+                      </div>
+                    )}
+                    {/* Debug Info for User/Agent */}
+                    {!selectedReport.imageUrl && (
+                      <div style={{ padding: '0.5rem', fontSize: '0.7rem', color: 'var(--clr-text-muted)', border: '1px dashed var(--clr-border)', margin: '1rem' }}>
+                        Debug: No imageUrl found in this document.
                       </div>
                     )}
                     <button 

@@ -63,7 +63,9 @@ const resources = {
         "titlePlaceholder": "Briefly describe the problem (e.g. Large Pothole on main road)",
         "descPlaceholder": "Provide more details to help us identify the exact problem...",
         "submit": "Submit Official Report",
-        "submitting": "Submitting Report..."
+        "submitting": "Submitting Report...",
+        "uploadError": "Failed to upload image. Please check your connection and try again.",
+        "uploadConfigError": "Image upload is not configured correctly."
       },
       "admin": {
         "title": "User Administration",
@@ -177,7 +179,9 @@ const resources = {
         "titlePlaceholder": "Décrivez brièvement (ex: Grand nid de poule)",
         "descPlaceholder": "Fournissez plus de détails...",
         "submit": "Soumettre le signalement",
-        "submitting": "Envoi en cours..."
+        "submitting": "Envoi en cours...",
+        "uploadError": "Échec du téléchargement de l'image. Veuillez vérifier votre connexion.",
+        "uploadConfigError": "Le téléchargement d'images n'est pas configuré correctement."
       },
       "admin": {
         "title": "Administration",
@@ -291,7 +295,9 @@ const resources = {
         "titlePlaceholder": "صف المشكلة باختصار (مثال: حفرة كبيرة...)",
         "descPlaceholder": "قدم المزيد من التفاصيل...",
         "submit": "إرسال البلاغ الرسمي",
-        "submitting": "جاري الإرسال..."
+        "submitting": "جاري الإرسال...",
+        "uploadError": "فشل تحميل الصورة. يرجى التحقق من الاتصال وإعادة المحاولة.",
+        "uploadConfigError": "لم يتم تكوين تحميل الصور بشكل صحيح."
       },
       "admin": {
         "title": "إدارة المستخدمين",
