@@ -147,7 +147,7 @@ const Profile = () => {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="card-premium" 
-            style={{ position: 'sticky', top: '7rem', padding: '2.5rem' }}
+            style={{ position: 'sticky', top: '7rem', padding: '2.5rem', overflow: 'visible' }}
           >
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: '2.5rem' }}>
               <div style={{ position: 'relative', marginBottom: '1.5rem' }}>
@@ -224,9 +224,9 @@ const Profile = () => {
                       </button>
                     </div>
                     {isAdmin && <span className="badge badge-reported" style={{ fontSize: '0.7rem' }}>{t('nav.admin')}</span>}
+                    <p style={{ color: 'var(--clr-text-muted)', fontSize: '0.9rem', marginTop: '0.4rem' }}>{currentUser?.email}</p>
                   </div>
                 )}
-                <p style={{ color: 'var(--clr-text-muted)', fontSize: '0.9rem', marginTop: '0.4rem' }}>{currentUser?.email}</p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center', marginTop: '0.5rem' }}>
                   {canModerate && <span className="badge badge-progress" style={{ fontSize: '0.65rem' }}>{t('nav.moderator')}</span>}
                   <span className="badge badge-other" style={{ fontSize: '0.65rem' }}>{t('profile.verified')}</span>
