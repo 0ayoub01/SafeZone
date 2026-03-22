@@ -180,46 +180,56 @@ const Profile = () => {
                   <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} disabled={uploading} />
                 </label>
               </div>
-              <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  {isEditing ? (
+              <div style={{ width: '100%', textAlign: 'center' }}>
+                {isEditing ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center', width: '100%' }}>
                     <input 
                       name="fullName"
                       value={editData.fullName}
                       onChange={handleEditChange}
                       className="form-control"
-                      style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem', height: 'auto', padding: '0.4rem 0.8rem' }}
+                      style={{ 
+                        fontSize: '1.4rem', 
+                        fontWeight: 700, 
+                        textAlign: 'center',
+                        width: '100%',
+                        padding: '0.6rem 1rem',
+                        borderRadius: 'var(--r-md)',
+                        backgroundColor: 'var(--clr-bg-raised)',
+                        border: '2px solid var(--clr-primary)'
+                      }}
                       placeholder="Full Name"
                     />
-                  ) : (
-                    <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{userProfile?.fullName || t('profile.verifiedCit')}</h3>
-                  )}
-                  {isAdmin && <span className="badge badge-reported" style={{ fontSize: '0.65rem' }}>{t('nav.admin')}</span>}
-                </div>
-                {!isEditing ? (
-                  <button 
-                    onClick={() => setIsEditing(true)}
-                    className="btn btn-outline btn-sm"
-                  >
-                    {t('profile.edit')}
-                  </button>
+                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', width: '100%' }}>
+                      <button onClick={handleSaveProfile} className="btn btn-primary" style={{ flex: 1, padding: '0.6rem' }} disabled={loading}>
+                        {loading ? <Loader2 className="spinner" size={18} /> : t('common.save')}
+                      </button>
+                      <button onClick={() => setIsEditing(false)} className="btn btn-outline" style={{ flex: 1, padding: '0.6rem' }} disabled={loading}>
+                        {t('common.cancel')}
+                      </button>
+                    </div>
+                  </div>
                 ) : (
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button onClick={handleSaveProfile} className="btn btn-primary btn-sm" disabled={uploading}>
-                      {loading ? <Loader2 className="spinner" size={14} /> : t('common.save')}
-                    </button>
-                    <button onClick={() => setIsEditing(false)} className="btn btn-outline btn-sm" disabled={uploading}>
-                      {t('common.cancel')}
-                    </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <h3 style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0 }}>{userProfile?.fullName || t('profile.verifiedCit')}</h3>
+                      <button 
+                        onClick={() => setIsEditing(true)}
+                        className="btn btn-icon btn-sm"
+                        style={{ backgroundColor: 'var(--clr-bg-raised)', borderRadius: '50%' }}
+                        title={t('profile.edit')}
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                    </div>
+                    {isAdmin && <span className="badge badge-reported" style={{ fontSize: '0.7rem' }}>{t('nav.admin')}</span>}
                   </div>
                 )}
-              </div>
-              <p style={{ color: 'var(--clr-text-muted)', fontSize: '0.9rem', marginTop: '0.4rem' }}>{currentUser?.email}</p>
-            </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center' }}>
-                {canModerate && <span className="badge badge-progress" style={{ fontSize: '0.65rem' }}>{t('nav.moderator')}</span>}
-                <span className="badge badge-other" style={{ fontSize: '0.65rem' }}>{t('profile.verified')}</span>
+                <p style={{ color: 'var(--clr-text-muted)', fontSize: '0.9rem', marginTop: '0.4rem' }}>{currentUser?.email}</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center', marginTop: '0.5rem' }}>
+                  {canModerate && <span className="badge badge-progress" style={{ fontSize: '0.65rem' }}>{t('nav.moderator')}</span>}
+                  <span className="badge badge-other" style={{ fontSize: '0.65rem' }}>{t('profile.verified')}</span>
+                </div>
               </div>
             </div>
 
