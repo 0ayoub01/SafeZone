@@ -18,16 +18,19 @@ import {
   AlertCircle,
   FileText,
   ChevronRight,
-  ShieldAlert
+  ShieldAlert,
+  Camera,
+  Loader2
 } from 'lucide-react';
+import { uploadToCloudinary } from '../utils/cloudinary';
 
 const Profile = () => {
-  const { currentUser, logout, isAdmin, canModerate } = useAuth();
+  const { currentUser, userProfile, updateProfileData, logout, isAdmin, canModerate } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [reports, setReports] = useState([]);
-  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -35,9 +38,6 @@ const Profile = () => {
       setLoading(true);
       setError('');
       try {
-        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-        if (userDoc.exists()) setProfile(userDoc.data());
-
         const q = query(
           collection(db, 'reports'),
           where('userId', '==', currentUser.uid),
@@ -46,9 +46,9 @@ const Profile = () => {
         const snapshot = await getDocs(q);
         setReports(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (err) {
-        console.error('Error fetching profile:', err);
+        console.error('Error fetching reports:', err);
         if (err.code === 'failed-precondition') {
-          setError('Profile reports require a database index. Please check the console (F12) for the creation link.');
+          setError('Profile reports require a database index.');
         } else {
           setError('Failed to load your reports.');
         }
@@ -58,6 +58,28 @@ const Profile = () => {
     };
     if (currentUser) fetchData();
   }, [currentUser]);
+
+  const handlePhotoChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Image size shouldn't exceed 5MB");
+      return;
+    }
+
+    setUploading(true);
+    setError('');
+    try {
+      const photoURL = await uploadToCloudinary(file, t);
+      await updateProfileData({ photoURL });
+    } catch (err) {
+      console.error("Profile photo upload failed:", err);
+      setError(err.message || "Failed to update profile photo.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -75,7 +97,7 @@ const Profile = () => {
     }
   };
 
-  const initials = (profile?.fullName || currentUser.email).charAt(0).toUpperCase();
+  const initials = (userProfile?.fullName || currentUser?.email || 'V').charAt(0).toUpperCase();
 
   return (
     <div className="view">
@@ -90,10 +112,38 @@ const Profile = () => {
             style={{ position: 'sticky', top: '7rem', padding: '2.5rem' }}
           >
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: '2.5rem' }}>
-              <div className="avatar avatar-xl" style={{ boxShadow: 'var(--shadow-glow)', marginBottom: '1.5rem' }}>
-                {initials}
+              <div style={{ position: 'relative', marginBottom: '1.5rem' }}>
+                <div className="avatar avatar-xl" style={{ boxShadow: 'var(--shadow-glow)', overflow: 'hidden' }}>
+                  {uploading ? (
+                    <Loader2 className="spinner" size={32} color="var(--clr-primary)" />
+                  ) : userProfile?.photoURL ? (
+                    <img src={userProfile.photoURL} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    initials
+                  )}
+                </div>
+                <label style={{ 
+                  position: 'absolute', 
+                  bottom: '-5px', 
+                  right: '-5px', 
+                  backgroundColor: 'var(--clr-primary)', 
+                  width: '36px', 
+                  height: '36px', 
+                  borderRadius: '50%', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  color: 'white',
+                  cursor: 'pointer',
+                  boxShadow: 'var(--shadow-md)',
+                  border: '3px solid var(--clr-surface)',
+                  transition: 'var(--trans-sm)'
+                }}>
+                  <Camera size={16} />
+                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} disabled={uploading} />
+                </label>
               </div>
-              <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{profile?.fullName || t('profile.verifiedCit')}</h3>
+              <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{userProfile?.fullName || t('profile.verifiedCit')}</h3>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center' }}>
                 {isAdmin && <span className="badge badge-reported" style={{ fontSize: '0.65rem' }}>{t('nav.admin')}</span>}
                 {canModerate && <span className="badge badge-progress" style={{ fontSize: '0.65rem' }}>{t('nav.moderator')}</span>}
@@ -113,14 +163,14 @@ const Profile = () => {
                 <div style={{ color: 'var(--clr-primary)' }}><Phone size={18} /></div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '0.75rem', color: 'var(--clr-text-muted)', fontWeight: 600 }}>{t('profile.phone')}</div>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{profile?.phone || t('profile.notProvided')}</div>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{userProfile?.phone || t('profile.notProvided')}</div>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                 <div style={{ color: 'var(--clr-primary)' }}><MapPin size={18} /></div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '0.75rem', color: 'var(--clr-text-muted)', fontWeight: 600 }}>{t('profile.location')}</div>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{profile?.city || 'Tunisia'}</div>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{userProfile?.city || 'Tunisia'}</div>
                 </div>
               </div>
             </div>

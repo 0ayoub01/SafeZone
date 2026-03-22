@@ -80,12 +80,27 @@ export const AuthProvider = ({ children }) => {
     return unsubscribe;
   }, []);
 
-  const isAdmin = userRole === 'admin';
-  const isModerator = userRole === 'moderator';
-  const canModerate = isAdmin || isModerator;
+  const updateProfileData = async (newData) => {
+    if (!currentUser) return;
+    const userRef = doc(db, 'users', currentUser.uid);
+    await setDoc(userRef, { ...userProfile, ...newData }, { merge: true });
+    setUserProfile(prev => ({ ...prev, ...newData }));
+  };
 
   return (
-    <AuthContext.Provider value={{ currentUser, userRole, userProfile, isAdmin, isModerator, canModerate, signup, login, loginWithGithub, logout }}>
+    <AuthContext.Provider value={{ 
+      currentUser, 
+      userRole, 
+      userProfile, 
+      isAdmin, 
+      isModerator, 
+      canModerate, 
+      signup, 
+      login, 
+      loginWithGithub, 
+      logout,
+      updateProfileData
+    }}>
       {!loading && children}
     </AuthContext.Provider>
   );

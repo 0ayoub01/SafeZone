@@ -12,7 +12,7 @@ const Navbar = () => {
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const { currentUser, isAdmin, canModerate, logout } = useAuth();
+  const { currentUser, userProfile, isAdmin, canModerate, logout } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
@@ -141,7 +141,13 @@ const Navbar = () => {
                     transition: 'var(--trans-sm)',
                   }}
                 >
-                  <Icon size={15} strokeWidth={active ? 2.5 : 2} />
+                  {label === t('nav.profile') && userProfile?.photoURL ? (
+                    <div style={{ width: '20px', height: '20px', borderRadius: '50%', overflow: 'hidden' }}>
+                      <img src={userProfile.photoURL} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                  ) : (
+                    <Icon size={15} strokeWidth={active ? 2.5 : 2} />
+                  )}
                   {label}
                 </Link>
               );

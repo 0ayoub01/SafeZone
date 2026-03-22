@@ -169,6 +169,7 @@ const Browse = () => {
         text: commentText,
         userId: currentUser.uid,
         userName: userProfile?.fullName || currentUser.displayName || null,
+        userPhotoURL: userProfile?.photoURL || null,
         createdAt: serverTimestamp()
       };
       
@@ -518,8 +519,12 @@ const Browse = () => {
                     ) : (
                       comments.map((c) => (
                         <div key={c.id} style={{ display: 'flex', gap: '1rem' }}>
-                          <div className="avatar avatar-sm">
-                            {c.userName && c.userName !== 'Verified Citizen' ? c.userName.charAt(0).toUpperCase() : 'V'}
+                          <div className="avatar avatar-sm" style={{ overflow: 'hidden' }}>
+                            {c.userPhotoURL ? (
+                              <img src={c.userPhotoURL} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              c.userName && c.userName !== 'Verified Citizen' ? c.userName.charAt(0).toUpperCase() : 'V'
+                            )}
                           </div>
                           <div style={{ flex: 1 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
