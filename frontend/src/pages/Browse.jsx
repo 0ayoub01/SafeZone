@@ -63,8 +63,7 @@ const Browse = () => {
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
   const [postingComment, setPostingComment] = useState(false);
-  const [isEditingReport, setIsEditingReport] = useState(false);
-  const [reportEditData, setReportEditData] = useState({ title: '', description: '' });
+  const [postingComment, setPostingComment] = useState(false);
 
   const categories = ['Roads', 'Lighting', 'Sanitation', 'Water', 'Other'];
 
@@ -129,23 +128,11 @@ const Browse = () => {
     }
   };
 
-  const handleEditReportClick = () => {
-    setReportEditData({
-      title: selectedReport.title,
-      description: selectedReport.description || ''
-    });
-    setIsEditingReport(true);
-  };
-
-  const handleSaveReport = async () => {
-    try {
-      await updateDoc(doc(db, 'reports', selectedReport.id), reportEditData);
-      setSelectedReport({ ...selectedReport, ...reportEditData });
-      setIsEditingReport(false);
-      fetchReports();
-    } catch (err) {
-      console.error("Failed to update report", err);
-    }
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    // This seems to have been leftover or intended for comments, 
+    // but based on the user's latest request to remove edit report, 
+    // I'll ensure this doesn't conflict.
   };
 
   const handleDeleteReport = async (reportId) => {
@@ -465,6 +452,32 @@ const Browse = () => {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 350px), 1fr))', maxHeight: '90vh' }}>
                 {/* Modal Left */}
                 <div style={{ backgroundColor: 'var(--clr-bg-raised)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+                  {/* Report Header */}
+                  <div style={{ padding: '2.5rem', borderBottom: '1px solid var(--clr-border)', backgroundColor: 'var(--clr-bg-card)', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+                      <div style={{ flex: 1 }}>
+                        <h3 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--clr-text-light)', marginBottom: '0.75rem', lineHeight: 1.2 }}>
+                          {selectedReport.title}
+                        </h3>
+                        <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--clr-text-muted)', fontSize: '0.9rem' }}>
+                            <MapPin size={16} color="var(--clr-primary)" /> {selectedReport.city}, {selectedReport.neighborhood}
+                          </span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--clr-text-muted)', fontSize: '0.9rem' }}>
+                            <Tag size={16} color="var(--clr-primary)" /> {t(`category.${selectedReport.category}`)}
+                          </span>
+                        </div>
+                      </div>
+                      <button onClick={() => setSelectedReport(null)} className="btn btn-icon" style={{ backgroundColor: 'var(--clr-bg-raised)' }}>
+                        <X size={20} />
+                      </button>
+                    </div>
+
+                    <p style={{ fontSize: '1.1rem', color: 'var(--clr-text-light)', lineHeight: 1.6, marginBottom: '2rem', whiteSpace: 'pre-wrap' }}>
+                      {selectedReport.description}
+                    </p>
+                  </div>
+
                   <div style={{ padding: '2.5rem', flex: 1, position: 'relative' }}>
                     {selectedReport.imageUrl && (
                       <div style={{ marginBottom: '2rem', borderRadius: 'var(--r-xl)', overflow: 'hidden', boxShadow: 'var(--shadow-md)', position: 'relative' }}>
@@ -482,11 +495,8 @@ const Browse = () => {
                           <Info size={32} style={{ marginBottom: '0.5rem', opacity: 0.5 }} />
                           <p>Image not available</p>
                         </div>
-                        {currentUser?.uid === selectedReport.userId && !isEditingReport && (
+                        {currentUser?.uid === selectedReport.userId && (
                           <div style={{ position: 'absolute', top: '1rem', right: '1rem', display: 'flex', gap: '0.5rem' }}>
-                            <button onClick={handleEditReportClick} className="btn btn-primary btn-sm" style={{ borderRadius: '50%', width: '36px', height: '36px', padding: 0 }}>
-                              <Edit2 size={16} />
-                            </button>
                             <button onClick={() => handleDeleteReport(selectedReport.id)} className="btn btn-danger btn-sm" style={{ borderRadius: '50%', width: '36px', height: '36px', padding: 0, backgroundColor: 'var(--clr-error)' }}>
                               <Trash2 size={16} />
                             </button>
@@ -500,24 +510,6 @@ const Browse = () => {
                         Debug: No imageUrl found in this document.
                       </div>
                     )}
-                    <button 
-                      onClick={() => { setSelectedReport(null); navigate('/browse'); }} 
-                      style={{ 
-                        position: 'absolute', 
-                        top: '1rem', 
-                        left: '1rem', 
-                        background: 'rgba(15, 23, 42, 0.6)', 
-                        backdropFilter: 'blur(8px)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        color: 'white', 
-                        cursor: 'pointer', 
-                        padding: '0.4rem',
-                        borderRadius: '10px',
-                        zIndex: 10
-                      }}
-                    >
-                      <X size={20} />
-                    </button>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', marginTop: '1.5rem' }}>
                       <span className="badge" style={{ backgroundColor: getStatusInfo(selectedReport.status).bg, color: getStatusInfo(selectedReport.status).color }}>
                         {selectedReport.status}
@@ -528,18 +520,11 @@ const Browse = () => {
                       </div>
                     </div>
                     
-                    <h2 style={{ fontSize: '1.8rem', marginBottom: '1rem' }}>{selectedReport.title}</h2>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', color: 'var(--clr-text-muted)' }}>
-                        <MapPin size={16} color="var(--clr-primary)" /> {selectedReport.city}, {selectedReport.neighborhood}
-                      </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', color: 'var(--clr-text-muted)' }}>
                         <Calendar size={16} color="var(--clr-primary)" /> {formatDate(selectedReport.createdAt)}
                       </div>
                     </div>
-                    <p style={{ lineHeight: '1.7', color: 'var(--clr-text-light)', fontSize: '0.95rem', whiteSpace: 'pre-wrap', marginBottom: '2rem' }}>
-                      {selectedReport.description}
-                    </p>
 
                     <div style={{ borderTop: '1px solid var(--clr-border)', paddingTop: '1.5rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative' }}>

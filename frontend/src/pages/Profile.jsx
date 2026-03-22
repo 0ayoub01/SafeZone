@@ -104,6 +104,25 @@ const Profile = () => {
     navigate('/login');
   };
 
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSaveProfile = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      await updateProfileData(editData);
+      setIsEditing(false);
+    } catch (err) {
+      console.error("Failed to update profile", err);
+      setError("Failed to save changes. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case 'Reported': return 'badge-reported';
@@ -183,15 +202,15 @@ const Profile = () => {
                     onClick={() => setIsEditing(true)}
                     className="btn btn-outline btn-sm"
                   >
-                    {t('profile.edit') || 'Edit Profile'}
+                    {t('profile.edit')}
                   </button>
                 ) : (
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button onClick={handleSaveProfile} className="btn btn-primary btn-sm" disabled={uploading}>
-                      {uploading ? <Loader2 className="spinner" size={14} /> : (t('common.save') || 'Save')}
+                      {loading ? <Loader2 className="spinner" size={14} /> : t('common.save')}
                     </button>
                     <button onClick={() => setIsEditing(false)} className="btn btn-outline btn-sm" disabled={uploading}>
-                      {t('common.cancel') || 'Cancel'}
+                      {t('common.cancel')}
                     </button>
                   </div>
                 )}
@@ -215,7 +234,7 @@ const Profile = () => {
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                 <div style={{ color: 'var(--clr-primary)' }}><Phone size={18} /></div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ color: 'var(--clr-text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.4rem' }}>{t('login.phone')}</div>
+                  <div style={{ color: 'var(--clr-text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.4rem' }}>{t('profile.phone')}</div>
                 {isEditing ? (
                   <input 
                     name="phone"
@@ -233,7 +252,7 @@ const Profile = () => {
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                 <div style={{ color: 'var(--clr-primary)' }}><MapPin size={18} /></div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ color: 'var(--clr-text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.4rem' }}>{t('login.city')}</div>
+                  <div style={{ color: 'var(--clr-text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.4rem' }}>{t('profile.location')}</div>
                 {isEditing ? (
                   <CustomSelect 
                     value={editData.city}

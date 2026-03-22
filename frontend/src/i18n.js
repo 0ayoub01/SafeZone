@@ -107,7 +107,8 @@ const resources = {
         "phone": "Phone",
         "location": "Location",
         "notProvided": "Not provided",
-        "signOut": "Sign Out"
+        "signOut": "Sign Out",
+        "edit": "Edit Profile"
       },
       "hero": {
         "title": "Empowering Communities for a",
@@ -115,6 +116,11 @@ const resources = {
         "subtitle": "Report infrastructure issues, track resolutions, and collaborate with local authorities to build a better neighborhood together.",
         "ctaStart": "Report an Issue",
         "ctaBrowse": "Browse Reports"
+      },
+      "common": {
+        "save": "Save",
+        "cancel": "Cancel",
+        "confirmDelete": "Are you sure?"
       }
     }
   },
@@ -223,7 +229,8 @@ const resources = {
         "phone": "Téléphone",
         "location": "Lieu",
         "notProvided": "Non fourni",
-        "signOut": "Déconnexion"
+        "signOut": "Déconnexion",
+        "edit": "Modifier le profil"
       },
       "hero": {
         "title": "Autonomiser les communautés pour une",
@@ -231,6 +238,11 @@ const resources = {
         "subtitle": "Signalez les problèmes d'infrastructure, suivez les résolutions et collaborez avec les autorités locales pour bâtir un meilleur quartier ensemble.",
         "ctaStart": "Signaler un problème",
         "ctaBrowse": "Parcourir les rapports"
+      },
+      "common": {
+        "save": "Enregistrer",
+        "cancel": "Annuler",
+        "confirmDelete": "Êtes-vous sûr ?"
       }
     }
   },
@@ -339,7 +351,8 @@ const resources = {
         "phone": "الهاتف",
         "location": "الموقع",
         "notProvided": "غير متوفر",
-        "signOut": "تسجيل خروج"
+        "signOut": "تسجيل خروج",
+        "edit": "تعديل الملف الشخصي"
       },
       "hero": {
         "title": "تمكين المجتمعات من أجل",
@@ -347,6 +360,11 @@ const resources = {
         "subtitle": "بلغ عن مشاكل البنية التحتية، تتبع الحلول، وتعاون مع السلطات المحلية لبناء حي أفضل معاً.",
         "ctaStart": "بلغ عن مشكلة",
         "ctaBrowse": "تصفح البلاغات"
+      },
+      "common": {
+        "save": "حفظ",
+        "cancel": "إلغاء",
+        "confirmDelete": "هل أنت متأكد؟"
       }
     }
   }
