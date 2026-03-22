@@ -87,6 +87,10 @@ export const AuthProvider = ({ children }) => {
     setUserProfile(prev => ({ ...prev, ...newData }));
   };
 
+  const isAdmin = userRole === 'admin';
+  const isModerator = userRole === 'moderator';
+  const canModerate = isAdmin || isModerator;
+
   return (
     <AuthContext.Provider value={{ 
       currentUser, 
