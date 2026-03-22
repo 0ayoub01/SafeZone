@@ -19,6 +19,7 @@ export const AuthProvider = ({ children }) => {
   const [userRole, setUserRole] = useState(null); // 'admin' or 'user'
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const signup = async (email, password, fullName, phone, city, photoURL) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -114,7 +115,9 @@ export const AuthProvider = ({ children }) => {
       login, 
       loginWithGithub, 
       logout,
-      updateProfileData
+      updateProfileData,
+      error,
+      setError
     }}>
       {!loading && children}
     </AuthContext.Provider>
