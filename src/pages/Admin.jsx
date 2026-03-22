@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, User as UserIcon, Mail, Phone, MapPin, ShieldCheck, Search, Trash2, X, ShieldAlert } from 'lucide-react';
-import CustomSelect from '../components/CustomSelect';
+import CustomSelect from '../components/common/CustomSelect';
 
 const Admin = () => {
   const { t } = useTranslation();

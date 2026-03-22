@@ -24,7 +24,7 @@ import {
   Edit2
 } from 'lucide-react';
 import { tunisianLocations } from '../data/locations';
-import CustomSelect from '../components/CustomSelect';
+import CustomSelect from '../components/common/CustomSelect';
 import { uploadToCloudinary } from '../utils/cloudinary';
 
 const Profile = () => {

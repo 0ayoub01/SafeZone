@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, MapPin, Trash2, ShieldAlert } from 'lucide-react';
-import CustomSelect from '../components/CustomSelect';
+import CustomSelect from '../components/common/CustomSelect';
 
 const Moderator = () => {
   const { t } = useTranslation();

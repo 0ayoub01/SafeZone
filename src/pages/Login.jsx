@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Camera, Mail, Lock, LogIn, UserPlus, AlertCircle, ArrowLeft, User, ShieldCheck, Phone, MapPin, Loader2, X } from 'lucide-react';
 import bgCommunity from '../assets/bg-community.png';
 import { tunisianLocations } from '../data/locations';
-import CustomSelect from '../components/CustomSelect';
+import CustomSelect from '../components/common/CustomSelect';
 import { uploadToCloudinary } from '../utils/cloudinary';
 import { useTranslation } from 'react-i18next';
 

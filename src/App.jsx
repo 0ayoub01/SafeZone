@@ -1,6 +1,6 @@
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Navbar from './components/Navbar';
-import Footer from './components/Footer';
+import Navbar from './components/layout/Navbar';
+import Footer from './components/layout/Footer';
 import Home from './pages/Home';
 import Browse from './pages/Browse';
 import Report from './pages/Report';

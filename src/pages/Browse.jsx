@@ -19,8 +19,9 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
-import CustomSelect from '../components/CustomSelect';
+import Navbar from '../components/layout/Navbar';
+import Footer from '../components/layout/Footer';
+import CustomSelect from '../components/common/CustomSelect';
 import { 
   MapPin, 
   Calendar, 
