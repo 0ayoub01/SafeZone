@@ -246,10 +246,11 @@ const Report = () => {
         }
       );
       const data = await response.json();
-      return data.secure_url;
+      return data.secure_url || "";
     } catch (err) {
       console.error("Cloudinary upload error:", err);
-      throw new Error("Failed to upload image. Please try again.");
+      // Fallback to empty string to prevent Firebase undefined error
+      return "";
     }
   };
 
@@ -266,7 +267,7 @@ const Report = () => {
     try {
       let imageUrl = '';
       if (image) {
-        imageUrl = await uploadToCloudinary(image);
+        imageUrl = (await uploadToCloudinary(image)) || '';
       }
 
       await addDoc(collection(db, 'reports'), {

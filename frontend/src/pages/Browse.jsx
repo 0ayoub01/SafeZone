@@ -328,13 +328,19 @@ const Browse = () => {
                       width: '60px', 
                       height: '60px', 
                       borderRadius: '16px', 
-                      background: status.bg, 
+                      background: report.imageUrl ? 'none' : status.bg, 
                       display: 'flex', 
                       alignItems: 'center', 
                       justifyContent: 'center',
-                      flexShrink: 0
+                      flexShrink: 0,
+                      overflow: 'hidden',
+                      border: report.imageUrl ? '1px solid var(--clr-border)' : 'none'
                     }}>
-                      <status.icon size={26} color={status.color} />
+                      {report.imageUrl ? (
+                        <img src={report.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <status.icon size={26} color={status.color} />
+                      )}
                     </div>
 
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0 }}>
@@ -409,11 +415,32 @@ const Browse = () => {
                 {/* Modal Left */}
                 <div style={{ backgroundColor: 'var(--clr-bg-raised)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
                   <div style={{ padding: '2.5rem', flex: 1, position: 'relative' }}>
+                    {selectedReport.imageUrl && (
+                      <div style={{ width: '100%', height: '240px', overflow: 'hidden', borderBottom: '1px solid var(--clr-border)' }}>
+                        <img 
+                          src={selectedReport.imageUrl} 
+                          alt={selectedReport.title} 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        />
+                      </div>
+                    )}
                     <button 
                       onClick={() => { setSelectedReport(null); navigate('/browse'); }} 
-                      style={{ position: 'absolute', top: '1rem', left: '1rem', background: 'none', border: 'none', color: 'var(--clr-text-muted)', cursor: 'pointer', padding: '0.5rem' }}
+                      style={{ 
+                        position: 'absolute', 
+                        top: '1rem', 
+                        left: '1rem', 
+                        background: 'rgba(15, 23, 42, 0.6)', 
+                        backdropFilter: 'blur(8px)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        color: 'white', 
+                        cursor: 'pointer', 
+                        padding: '0.4rem',
+                        borderRadius: '10px',
+                        zIndex: 10
+                      }}
                     >
-                      <X size={24} />
+                      <X size={20} />
                     </button>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', marginTop: '1.5rem' }}>
                       <span className="badge" style={{ backgroundColor: getStatusInfo(selectedReport.status).bg, color: getStatusInfo(selectedReport.status).color }}>
