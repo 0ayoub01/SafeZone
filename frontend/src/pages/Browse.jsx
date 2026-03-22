@@ -63,7 +63,6 @@ const Browse = () => {
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
   const [postingComment, setPostingComment] = useState(false);
-  const [postingComment, setPostingComment] = useState(false);
 
   const categories = ['Roads', 'Lighting', 'Sanitation', 'Water', 'Other'];
 
