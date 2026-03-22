@@ -1,4 +1,3 @@
-```
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -44,7 +43,6 @@ import {
   Edit2,
   Trash2
 } from 'lucide-react';
-import { deleteDoc } from 'firebase/firestore';
 
 const Browse = () => {
   const { t } = useTranslation();
