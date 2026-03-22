@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "concurrently \"npm run dev -w server\" \"npm run dev -w frontend\"",
     "frontend": "npm run dev -w frontend",
-    "server": "npm run dev -w server"
+    "server": "npm run dev -w server",
+    "build": "npm run build -w frontend"
   },
   "devDependencies": {
     "concurrently": "^8.2.0",

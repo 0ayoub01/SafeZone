@@ -18,7 +18,10 @@ import {
   AlertCircle,
   Loader2,
   Navigation,
-  Search
+  Search,
+  Camera,
+  Image as ImageIcon,
+  Trash2
 } from 'lucide-react';
 import { tunisianLocations } from '../data/locations';
 import { delegationCoords } from '../data/delegationCoords';
@@ -116,6 +119,9 @@ const Report = () => {
     description: '',
     location: { lat: 36.8065, lng: 10.1815 } // Default to Tunis
   });
+  const [image, setImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [error, setError] = useState('');
@@ -202,6 +208,51 @@ const Report = () => {
     }
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setError("Image size shouldn't exceed 5MB");
+        return;
+      }
+      setImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadToCloudinary = async (file) => {
+    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+    const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
+    if (!cloudName || !uploadPreset) {
+      console.warn("Cloudinary configuration missing. Uploading without image.");
+      return "";
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', uploadPreset);
+
+    try {
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+      const data = await response.json();
+      return data.secure_url;
+    } catch (err) {
+      console.error("Cloudinary upload error:", err);
+      throw new Error("Failed to upload image. Please try again.");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!currentUser) {
@@ -213,9 +264,14 @@ const Report = () => {
     setError('');
 
     try {
+      let imageUrl = '';
+      if (image) {
+        imageUrl = await uploadToCloudinary(image);
+      }
+
       await addDoc(collection(db, 'reports'), {
         ...formData,
-        imageUrl: '',
+        imageUrl: imageUrl,
         status: 'Reported',
         createdAt: serverTimestamp(),
         userId: currentUser.uid,
@@ -478,6 +534,67 @@ const Report = () => {
                     required
                     style={{ resize: 'vertical' }}
                   />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '2rem' }}>
+                  <label className="form-label">{t('report.addPhoto') || 'Add a Photo'}</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: imagePreview ? '1fr' : '1fr 1fr', gap: '1rem' }}>
+                    {!imagePreview ? (
+                      <>
+                        <label className="card" style={{ 
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          alignItems: 'center', 
+                          padding: '2rem', 
+                          cursor: 'pointer',
+                          gap: '0.5rem',
+                          border: '2px dashed var(--clr-border)'
+                        }}>
+                          <Camera size={32} color="var(--clr-primary)" />
+                          <span style={{ fontWeight: 600 }}>{t('report.takePhoto') || 'Take Photo'}</span>
+                          <input type="file" accept="image/*" capture="environment" onChange={handleImageChange} style={{ display: 'none' }} />
+                        </label>
+                        <label className="card" style={{ 
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          alignItems: 'center', 
+                          padding: '2rem', 
+                          cursor: 'pointer',
+                          gap: '0.5rem',
+                          border: '2px dashed var(--clr-border)'
+                        }}>
+                          <ImageIcon size={32} color="var(--clr-primary)" />
+                          <span style={{ fontWeight: 600 }}>{t('report.uploadImage') || 'Upload Image'}</span>
+                          <input type="file" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
+                        </label>
+                      </>
+                    ) : (
+                      <div style={{ position: 'relative', borderRadius: 'var(--r-lg)', overflow: 'hidden', height: '250px' }}>
+                        <img src={imagePreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <button 
+                          onClick={() => { setImage(null); setImagePreview(null); }}
+                          style={{
+                            position: 'absolute',
+                            top: '1rem',
+                            right: '1rem',
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            backgroundColor: 'rgba(255, 0, 0, 0.8)',
+                            color: 'white',
+                            border: 'none',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            boxShadow: 'var(--shadow-md)'
+                          }}
+                        >
+                          <Trash2 size={20} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
