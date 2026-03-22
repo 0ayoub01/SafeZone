@@ -20,7 +20,8 @@ import {
   ChevronRight,
   ShieldAlert,
   Camera,
-  Loader2
+  Loader2,
+  Edit2
 } from 'lucide-react';
 import { tunisianLocations } from '../data/locations';
 import CustomSelect from '../components/CustomSelect';
