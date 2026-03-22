@@ -224,7 +224,6 @@ const Profile = () => {
                       </button>
                     </div>
                     {isAdmin && <span className="badge badge-reported" style={{ fontSize: '0.7rem' }}>{t('nav.admin')}</span>}
-                    <p style={{ color: 'var(--clr-text-muted)', fontSize: '0.9rem', marginTop: '0.4rem' }}>{currentUser?.email}</p>
                   </div>
                 )}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center', marginTop: '0.5rem' }}>
