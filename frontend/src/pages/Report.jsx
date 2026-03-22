@@ -109,7 +109,7 @@ const LocationMarker = ({ position, setPosition }) => {
 
 const Report = () => {
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, userProfile } = useAuth();
   const { t } = useTranslation();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
