@@ -2,18 +2,23 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
-import { Mail, Lock, LogIn, UserPlus, AlertCircle, ArrowLeft, User, ShieldCheck, Phone, MapPin } from 'lucide-react';
+import { Camera, Mail, Lock, LogIn, UserPlus, AlertCircle, ArrowLeft, User, ShieldCheck, Phone, MapPin, Loader2, X } from 'lucide-react';
 import bgCommunity from '../assets/bg-community.png';
 import { tunisianLocations } from '../data/locations';
 import CustomSelect from '../components/CustomSelect';
+import { uploadToCloudinary } from '../utils/cloudinary';
+import { useTranslation } from 'react-i18next';
 
 const Login = () => {
+  const { t } = useTranslation();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [city, setCity] = useState('');
+  const [image, setImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
@@ -29,7 +34,11 @@ const Login = () => {
       if (isLogin) {
         await login(email, password);
       } else {
-        await signup(email, password, name, phone, city);
+        let photoURL = '';
+        if (image) {
+          photoURL = await uploadToCloudinary(image, t);
+        }
+        await signup(email, password, name, phone, city, photoURL);
       }
       navigate('/');
     } catch (err) {
@@ -39,6 +48,22 @@ const Login = () => {
       setLoading(false);
     }
   }
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setError("Image size shouldn't exceed 5MB");
+        return;
+      }
+      setImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   return (
     <div 
@@ -99,6 +124,60 @@ const Login = () => {
           <form onSubmit={handleSubmit}>
             {!isLogin && (
               <>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '2rem' }}>
+                  <div style={{ position: 'relative' }}>
+                    <div className="avatar avatar-xl" style={{ boxShadow: 'var(--shadow-glow)', overflow: 'hidden', backgroundColor: 'var(--clr-bg-raised)' }}>
+                      {imagePreview ? (
+                        <img src={imagePreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <User size={32} color="var(--clr-text-muted)" />
+                      )}
+                    </div>
+                    <label style={{ 
+                      position: 'absolute', 
+                      bottom: '-5px', 
+                      right: '-5px', 
+                      backgroundColor: 'var(--clr-primary)', 
+                      width: '32px', 
+                      height: '32px', 
+                      borderRadius: '50%', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      color: 'white',
+                      cursor: 'pointer',
+                      boxShadow: 'var(--shadow-md)',
+                      border: '2px solid var(--clr-surface)',
+                    }}>
+                      <Camera size={14} />
+                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageChange} />
+                    </label>
+                    {imagePreview && (
+                      <button 
+                        type="button"
+                        onClick={() => { setImage(null); setImagePreview(null); }}
+                        style={{
+                          position: 'absolute',
+                          top: '-5px',
+                          right: '-5px',
+                          backgroundColor: 'var(--clr-error)',
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          border: 'none',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <X size={12} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 <div className="form-group">
                   <label className="form-label">Full Name</label>
                   <div style={{ position: 'relative' }}>

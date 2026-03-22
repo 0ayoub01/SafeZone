@@ -20,13 +20,14 @@ export const AuthProvider = ({ children }) => {
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const signup = async (email, password, fullName, phone, city) => {
+  const signup = async (email, password, fullName, phone, city, photoURL) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     await setDoc(doc(db, 'users', userCredential.user.uid), {
       fullName: fullName || '',
       phone: phone || '',
       city: city || '',
       email: email,
+      photoURL: photoURL || '',
       role: 'user',
       createdAt: serverTimestamp()
     });
