@@ -22,6 +22,8 @@ import {
   Camera,
   Loader2
 } from 'lucide-react';
+import { tunisianLocations } from '../data/locations';
+import CustomSelect from '../components/CustomSelect';
 import { uploadToCloudinary } from '../utils/cloudinary';
 
 const Profile = () => {
@@ -31,7 +33,23 @@ const Profile = () => {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState({
+    fullName: '',
+    phone: '',
+    city: ''
+  });
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (userProfile) {
+      setEditData({
+        fullName: userProfile.fullName || '',
+        phone: userProfile.phone || '',
+        city: userProfile.city || ''
+      });
+    }
+  }, [userProfile]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -143,9 +161,44 @@ const Profile = () => {
                   <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} disabled={uploading} />
                 </label>
               </div>
-              <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{userProfile?.fullName || t('profile.verifiedCit')}</h3>
+              <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  {isEditing ? (
+                    <input 
+                      name="fullName"
+                      value={editData.fullName}
+                      onChange={handleEditChange}
+                      className="form-control"
+                      style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem', height: 'auto', padding: '0.4rem 0.8rem' }}
+                      placeholder="Full Name"
+                    />
+                  ) : (
+                    <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{userProfile?.fullName || t('profile.verifiedCit')}</h3>
+                  )}
+                  {isAdmin && <span className="badge badge-reported" style={{ fontSize: '0.65rem' }}>{t('nav.admin')}</span>}
+                </div>
+                {!isEditing ? (
+                  <button 
+                    onClick={() => setIsEditing(true)}
+                    className="btn btn-outline btn-sm"
+                  >
+                    {t('profile.edit') || 'Edit Profile'}
+                  </button>
+                ) : (
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button onClick={handleSaveProfile} className="btn btn-primary btn-sm" disabled={uploading}>
+                      {uploading ? <Loader2 className="spinner" size={14} /> : (t('common.save') || 'Save')}
+                    </button>
+                    <button onClick={() => setIsEditing(false)} className="btn btn-outline btn-sm" disabled={uploading}>
+                      {t('common.cancel') || 'Cancel'}
+                    </button>
+                  </div>
+                )}
+              </div>
+              <p style={{ color: 'var(--clr-text-muted)', fontSize: '0.9rem', marginTop: '0.4rem' }}>{currentUser?.email}</p>
+            </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center' }}>
-                {isAdmin && <span className="badge badge-reported" style={{ fontSize: '0.65rem' }}>{t('nav.admin')}</span>}
                 {canModerate && <span className="badge badge-progress" style={{ fontSize: '0.65rem' }}>{t('nav.moderator')}</span>}
                 <span className="badge badge-other" style={{ fontSize: '0.65rem' }}>{t('profile.verified')}</span>
               </div>
@@ -162,16 +215,36 @@ const Profile = () => {
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                 <div style={{ color: 'var(--clr-primary)' }}><Phone size={18} /></div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--clr-text-muted)', fontWeight: 600 }}>{t('profile.phone')}</div>
+                  <div style={{ color: 'var(--clr-text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.4rem' }}>{t('login.phone')}</div>
+                {isEditing ? (
+                  <input 
+                    name="phone"
+                    value={editData.phone}
+                    onChange={handleEditChange}
+                    className="form-control"
+                    style={{ fontSize: '0.9rem', padding: '0.4rem 0.8rem' }}
+                    placeholder="+216 ..."
+                  />
+                ) : (
                   <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{userProfile?.phone || t('profile.notProvided')}</div>
-                </div>
+                )}
+              </div>
               </div>
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                 <div style={{ color: 'var(--clr-primary)' }}><MapPin size={18} /></div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--clr-text-muted)', fontWeight: 600 }}>{t('profile.location')}</div>
+                  <div style={{ color: 'var(--clr-text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.4rem' }}>{t('login.city')}</div>
+                {isEditing ? (
+                  <CustomSelect 
+                    value={editData.city}
+                    onChange={(val) => setEditData(prev => ({ ...prev, city: val }))}
+                    options={Object.keys(tunisianLocations)}
+                    style={{ fontSize: '0.9rem', padding: '0.4rem 0.8rem' }}
+                  />
+                ) : (
                   <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{userProfile?.city || 'Tunisia'}</div>
-                </div>
+                )}
+              </div>
               </div>
             </div>
 

@@ -2,8 +2,8 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signOut,
   onAuthStateChanged,
+  signOut,
   GithubAuthProvider,
   signInWithPopup
 } from 'firebase/auth';
@@ -50,12 +50,22 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
+      setError(null); // Clear any previous errors on auth state change
       if (user) {
         try {
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists()) {
-            setUserRole(userDoc.data().role);
-            setUserProfile(userDoc.data());
+            const data = userDoc.data();
+            if (data.disabled) {
+              await signOut(auth);
+              setCurrentUser(null);
+              setUserRole(null);
+              setUserProfile(null);
+              setError('Your account has been deactivated. Please contact support.');
+              return;
+            }
+            setUserRole(data.role || 'user');
+            setUserProfile(data);
           } else {
             // Auto-create missing legacy profile
             const newProfile = {

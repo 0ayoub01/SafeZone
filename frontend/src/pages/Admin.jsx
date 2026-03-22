@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, User as UserIcon, Mail, Phone, MapPin, ShieldCheck } from 'lucide-react';
+import { Shield, User as UserIcon, Mail, Phone, MapPin, ShieldCheck, Search, Trash2, X, ShieldAlert } from 'lucide-react';
 import CustomSelect from '../components/CustomSelect';
 
 const Admin = () => {
   const { t } = useTranslation();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const { deleteDoc } = require('firebase/firestore'); // Or ensure it's imported at top
 
   useEffect(() => {
     fetchUsers();
@@ -36,6 +38,31 @@ const Admin = () => {
     }
   };
 
+  const handleDeleteUser = async (userId) => {
+    if (window.confirm(t('admin.confirmDeleteUser') || 'Are you sure you want to delete this user? This cannot be undone.')) {
+      try {
+        await deleteDoc(doc(db, 'users', userId));
+        setUsers(users.filter(u => u.id !== userId));
+      } catch (err) {
+        console.error('Error deleting user', err);
+      }
+    }
+  };
+
+  const handleToggleDeactivate = async (userId, currentState) => {
+    try {
+      await updateDoc(doc(db, 'users', userId), { disabled: !currentState });
+      setUsers(users.map(u => u.id === userId ? { ...u, disabled: !currentState } : u));
+    } catch (err) {
+      console.error('Error toggling user status', err);
+    }
+  };
+
+  const filteredUsers = users.filter(user => 
+    user.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="view container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '3rem' }}>
@@ -58,6 +85,27 @@ const Admin = () => {
         </div>
       </div>
       
+      <div className="form-group" style={{ marginBottom: '2rem', position: 'relative' }}>
+        <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--clr-text-muted)' }}>
+          <Search size={18} />
+        </span>
+        <input 
+          type="text" 
+          className="form-control" 
+          placeholder={t('admin.searchPlaceholder') || "Search by name or email..."}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{ paddingLeft: '3rem' }}
+        />
+        {searchTerm && (
+          <button 
+            onClick={() => setSearchTerm('')} 
+            style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--clr-text-muted)', cursor: 'pointer' }}
+          >
+            <X size={18} />
+          </button>
+        )}
+      </div>
       {loading ? (
         <div style={{ textAlign: 'center', padding: '5rem' }}>
           <div style={{ width: '40px', height: '40px', border: '4px solid #eee', borderTopColor: 'var(--clr-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto' }} />
@@ -71,7 +119,7 @@ const Admin = () => {
           ) : (
             <motion.div layout style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <AnimatePresence>
-                {users.map((user) => (
+                {filteredUsers.map((user) => (
                   <motion.div 
                     key={user.id}
                     layout
@@ -92,7 +140,7 @@ const Admin = () => {
                           color: user.role === 'admin' ? 'var(--clr-primary)' : user.role === 'moderator' ? 'var(--clr-info)' : 'var(--clr-text-muted)',
                           padding: '0.2rem 0.6rem', fontSize: '0.7rem' 
                         }}>
-                          {user.role.toUpperCase()}
+                          {(user.role || 'user').toUpperCase()}
                         </span>
                         <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--clr-text)' }}>
                           {user.fullName || t('admin.citizen')}
@@ -119,7 +167,7 @@ const Admin = () => {
                     <div style={{ 
                       display: 'flex', 
                       alignItems: 'center',
-                      gap: '1rem',
+                      gap: '0.75rem',
                       borderLeft: '1px solid var(--clr-border)',
                       paddingLeft: '1.5rem',
                       marginLeft: '0.5rem',
@@ -137,6 +185,31 @@ const Admin = () => {
                           style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', fontWeight: 700, backgroundColor: 'var(--clr-surface)', border: '1px solid var(--clr-border)' }}
                         />
                       </div>
+                      <button 
+                        onClick={() => handleToggleDeactivate(user.id, user.disabled)}
+                        className="btn"
+                        style={{ 
+                          padding: '0.6rem', 
+                          backgroundColor: user.disabled ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)', 
+                          color: user.disabled ? 'var(--clr-success)' : 'var(--clr-error)', 
+                          border: 'none', 
+                          borderRadius: 'var(--r-md)', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center' 
+                        }}
+                        title={user.disabled ? "Activate Account" : "Deactivate Account"}
+                      >
+                        {user.disabled ? <ShieldCheck size={18} /> : <ShieldAlert size={18} />}
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteUser(user.id)}
+                        className="btn"
+                        style={{ padding: '0.6rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--clr-error)', border: 'none', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        title="Delete User"
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </div>
                   </motion.div>
                 ))}

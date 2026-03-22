@@ -1,3 +1,4 @@
+```
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -12,7 +13,10 @@ import {
   arrayUnion, 
   arrayRemove, 
   addDoc, 
-  serverTimestamp 
+  serverTimestamp,
+  deleteDoc,
+  getDoc,
+  increment
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
@@ -36,8 +40,11 @@ import {
   Share2,
   Copy,
   Send,
-  ShieldCheck
+  ShieldCheck,
+  Edit2,
+  Trash2
 } from 'lucide-react';
+import { deleteDoc } from 'firebase/firestore';
 
 const Browse = () => {
   const { t } = useTranslation();
@@ -58,6 +65,8 @@ const Browse = () => {
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
   const [postingComment, setPostingComment] = useState(false);
+  const [isEditingReport, setIsEditingReport] = useState(false);
+  const [reportEditData, setReportEditData] = useState({ title: '', description: '' });
 
   const categories = ['Roads', 'Lighting', 'Sanitation', 'Water', 'Other'];
 
@@ -122,16 +131,59 @@ const Browse = () => {
     }
   };
 
+  const handleEditReportClick = () => {
+    setReportEditData({
+      title: selectedReport.title,
+      description: selectedReport.description || ''
+    });
+    setIsEditingReport(true);
+  };
+
+  const handleSaveReport = async () => {
+    try {
+      await updateDoc(doc(db, 'reports', selectedReport.id), reportEditData);
+      setSelectedReport({ ...selectedReport, ...reportEditData });
+      setIsEditingReport(false);
+      fetchReports();
+    } catch (err) {
+      console.error("Failed to update report", err);
+    }
+  };
+
+  const handleDeleteReport = async (reportId) => {
+    if (window.confirm(t('mod.confirmDel') || 'Are you sure you want to delete this report?')) {
+      try {
+        await deleteDoc(doc(db, 'reports', reportId));
+        setSelectedReport(null);
+        fetchReports();
+      } catch (err) {
+        console.error("Failed to delete report", err);
+      }
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    if (window.confirm(t('common.confirmDelete') || 'Delete this comment?')) {
+      try {
+        await deleteDoc(doc(db, 'reports', selectedReport.id, 'comments', commentId));
+        await updateDoc(doc(db, 'reports', selectedReport.id), {
+          commentCount: increment(-1)
+        });
+        fetchComments(selectedReport.id);
+        fetchReports(); // Refresh the list to show updated count
+      } catch (err) {
+        console.error("Failed to delete comment", err);
+      }
+    }
+  };
+
   const fetchComments = async (reportId) => {
     try {
-      const q = query(
-        collection(db, 'reports', reportId, 'comments'),
-        orderBy('createdAt', 'asc')
-      );
-      const snapshot = await getDocs(q);
-      setComments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    } catch (err) {
-      console.error("Error fetching comments:", err);
+      const q = query(collection(db, 'reports', reportId, 'comments'), orderBy('createdAt', 'desc'));
+      const snap = await getDocs(q);
+      setComments(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    } catch (e) {
+      console.error("Failed to load comments", e);
     }
   };
 
@@ -417,17 +469,31 @@ const Browse = () => {
                 <div style={{ backgroundColor: 'var(--clr-bg-raised)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
                   <div style={{ padding: '2.5rem', flex: 1, position: 'relative' }}>
                     {selectedReport.imageUrl && (
-                      <div style={{ width: '100%', height: '240px', overflow: 'hidden', borderBottom: '1px solid var(--clr-border)', position: 'relative' }}>
-                        <img 
-                          src={selectedReport.imageUrl} 
-                          alt={selectedReport.title} 
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                      <div style={{ marginBottom: '2rem', borderRadius: 'var(--r-xl)', overflow: 'hidden', boxShadow: 'var(--shadow-md)', position: 'relative' }}>
+                        <img
+                          src={selectedReport.imageUrl}
+                          alt={selectedReport.title}
+                          style={{ width: '100%', maxHeight: '450px', objectFit: 'cover', display: 'block' }}
                           onError={(e) => {
                             console.error("Image failed to load:", selectedReport.imageUrl);
                             e.target.style.display = 'none';
-                            e.target.parentElement.innerHTML += `<div style="padding: 1rem; color: var(--clr-error); font-size: 0.8rem;">Image failed to load. URL: ${selectedReport.imageUrl}</div>`;
+                            e.target.nextSibling.style.display = 'block';
                           }}
                         />
+                        <div style={{ display: 'none', padding: '2rem', textAlign: 'center', backgroundColor: '#f8fafc', color: '#64748b' }}>
+                          <Info size={32} style={{ marginBottom: '0.5rem', opacity: 0.5 }} />
+                          <p>Image not available</p>
+                        </div>
+                        {currentUser?.uid === selectedReport.userId && !isEditingReport && (
+                          <div style={{ position: 'absolute', top: '1rem', right: '1rem', display: 'flex', gap: '0.5rem' }}>
+                            <button onClick={handleEditReportClick} className="btn btn-primary btn-sm" style={{ borderRadius: '50%', width: '36px', height: '36px', padding: 0 }}>
+                              <Edit2 size={16} />
+                            </button>
+                            <button onClick={() => handleDeleteReport(selectedReport.id)} className="btn btn-danger btn-sm" style={{ borderRadius: '50%', width: '36px', height: '36px', padding: 0, backgroundColor: 'var(--clr-error)' }}>
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                     {/* Debug Info for User/Agent */}
@@ -519,19 +585,26 @@ const Browse = () => {
                     ) : (
                       comments.map((c) => (
                         <div key={c.id} style={{ display: 'flex', gap: '1rem' }}>
-                          <div className="avatar avatar-sm" style={{ overflow: 'hidden' }}>
+                          <div className="avatar" style={{ width: '40px', height: '40px', overflow: 'hidden', flexShrink: 0 }}>
                             {c.userPhotoURL ? (
                               <img src={c.userPhotoURL} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             ) : (
-                              c.userName && c.userName !== 'Verified Citizen' ? c.userName.charAt(0).toUpperCase() : 'V'
+                              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--clr-bg-raised)', color: 'var(--clr-text-muted)', fontWeight: 700 }}>
+                                {c.userName && c.userName !== 'Verified Citizen' ? c.userName.charAt(0).toUpperCase() : 'V'}
+                              </div>
                             )}
                           </div>
                           <div style={{ flex: 1 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                              <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>
-                                {c.userName === 'Verified Citizen' || !c.userName ? t('profile.verifiedCit') : c.userName}
-                              </span>
-                              <span style={{ fontSize: '0.7rem', color: 'var(--clr-text-muted)' }}>{formatDate(c.createdAt)}</span>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <div style={{ fontWeight: 800, fontSize: '0.9rem', marginBottom: '0.2rem' }}>{c.userName || 'Verified Citizen'}</div>
+                              {currentUser?.uid === c.userId && (
+                                <button onClick={() => handleDeleteComment(c.id)} style={{ color: 'var(--clr-text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.2rem' }}>
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
+                            </div>
+                            <div style={{ color: 'var(--clr-text-muted)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <Clock size={12} /> {c.createdAt?.toDate ? c.createdAt.toDate().toLocaleDateString() : 'Just now'}
                             </div>
                             <p style={{ fontSize: '0.9rem', color: 'var(--clr-text-light)', lineHeight: '1.5' }}>{c.text}</p>
                           </div>
