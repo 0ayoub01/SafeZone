@@ -143,6 +143,7 @@ const Browse = () => {
         await deleteDoc(doc(db, 'reports', reportId));
         setSelectedReport(null);
         fetchReports();
+        toast.error("Report deleted successfully");
       } catch (err) {
         console.error("Failed to delete report", err);
       }
@@ -158,6 +159,7 @@ const Browse = () => {
         });
         fetchComments(selectedReport.id);
         fetchReports(); // Refresh the list to show updated count
+        toast.error("Comment deleted successfully");
       } catch (err) {
         console.error("Failed to delete comment", err);
       }
@@ -192,6 +194,20 @@ const Browse = () => {
         await updateDoc(reportRef, { upvotes: arrayUnion(currentUser.uid) });
         setReports(prev => prev.map(r => r.id === report.id ? { ...r, upvotes: [...(r.upvotes || []), currentUser.uid] } : r));
         toast.success("You liked this report");
+
+        // Create notification for the report owner
+        if (report.userId && report.userId !== currentUser.uid) {
+          await addDoc(collection(db, 'notifications'), {
+            recipientId: report.userId,
+            senderId: currentUser.uid,
+            senderName: userProfile?.fullName || currentUser.displayName || 'Someone',
+            type: 'like',
+            reportId: report.id,
+            reportTitle: report.title,
+            read: false,
+            createdAt: serverTimestamp()
+          });
+        }
       }
     } catch (err) {
       console.error("Upvote error:", err);
@@ -222,6 +238,21 @@ const Browse = () => {
       const reportRef = doc(db, 'reports', selectedReport.id);
       await updateDoc(reportRef, { commentCount: (selectedReport.commentCount || 0) + 1 });
       
+      toast.success("Comment added successfully");
+
+      // Create notification for the report owner
+      if (selectedReport.userId && selectedReport.userId !== currentUser.uid) {
+        await addDoc(collection(db, 'notifications'), {
+          recipientId: selectedReport.userId,
+          senderId: currentUser.uid,
+          senderName: userProfile?.fullName || currentUser.displayName || 'Someone',
+          type: 'comment',
+          reportId: selectedReport.id,
+          reportTitle: selectedReport.title,
+          read: false,
+          createdAt: serverTimestamp()
+        });
+      }
     } catch (err) {
       console.error("Error posting comment:", err);
     } finally {
@@ -237,7 +268,7 @@ const Browse = () => {
       window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
     } else if (platform === 'copy') {
       navigator.clipboard.writeText(url);
-      alert('Link copied to clipboard!');
+      toast.success("Link copied to clipboard!");
     }
   };
 
