@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-toastify';
 import { 
   collection, 
   query, 
@@ -19,8 +21,6 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
-import Navbar from '../components/layout/Navbar';
-import Footer from '../components/layout/Footer';
 import CustomSelect from '../components/common/CustomSelect';
 import { 
   MapPin, 
@@ -42,10 +42,12 @@ import {
   Send,
   ShieldCheck,
   Edit2,
-  Trash2
+  Trash2,
+  Trash
 } from 'lucide-react';
 
 const Browse = () => {
+  console.log("Browse: Component Mounting");
   const { t } = useTranslation();
   const { currentUser, userProfile } = useAuth();
   const navigate = useNavigate();
@@ -79,9 +81,9 @@ const Browse = () => {
     fetchAllDataForFilters();
   }, []);
 
-  const dynamicCities = [...new Set(allReports.map(r => r.city).filter(Boolean))].sort();
-  const dynamicDelegations = cityFilter 
-    ? [...new Set(allReports.filter(r => r.city === cityFilter).map(r => r.neighborhood).filter(Boolean))].sort() 
+  const dynamicCities = Array.isArray(allReports) ? [...new Set(allReports.map(r => r?.city).filter(Boolean))].sort() : [];
+  const dynamicDelegations = (cityFilter && Array.isArray(allReports)) 
+    ? [...new Set(allReports.filter(r => r?.city === cityFilter).map(r => r?.neighborhood).filter(Boolean))].sort() 
     : [];
 
   useEffect(() => {
@@ -89,7 +91,7 @@ const Browse = () => {
   }, [cityFilter, categoryFilter, delegationFilter]);
 
   useEffect(() => {
-    if (selectedReport) {
+    if (selectedReport && selectedReport.id) {
       fetchComments(selectedReport.id);
     }
   }, [selectedReport]);
@@ -136,7 +138,7 @@ const Browse = () => {
   };
 
   const handleDeleteReport = async (reportId) => {
-    if (window.confirm(t('mod.confirmDel') || 'Are you sure you want to delete this report?')) {
+    if (window.confirm("Are you sure?")) {
       try {
         await deleteDoc(doc(db, 'reports', reportId));
         setSelectedReport(null);
@@ -163,6 +165,7 @@ const Browse = () => {
   };
 
   const fetchComments = async (reportId) => {
+    if (!reportId) return;
     try {
       const q = query(collection(db, 'reports', reportId, 'comments'), orderBy('createdAt', 'desc'));
       const snap = await getDocs(q);
@@ -188,6 +191,7 @@ const Browse = () => {
       } else {
         await updateDoc(reportRef, { upvotes: arrayUnion(currentUser.uid) });
         setReports(prev => prev.map(r => r.id === report.id ? { ...r, upvotes: [...(r.upvotes || []), currentUser.uid] } : r));
+        toast.success("You liked this report");
       }
     } catch (err) {
       console.error("Upvote error:", err);
@@ -337,9 +341,10 @@ const Browse = () => {
             margin: '0 auto 5rem'
           }}>
             <AnimatePresence>
-              {reports.map((report) => {
-                const status = getStatusInfo(report.status);
-                const isUpvoted = report.upvotes?.includes(currentUser?.uid);
+              {Array.isArray(reports) && reports.map((report) => {
+                if (!report) return null;
+                const status = getStatusInfo(report?.status);
+                const isUpvoted = (report?.upvotes && Array.isArray(report.upvotes)) ? report.upvotes.includes(currentUser?.uid) : false;
                 
                 return (
                   <motion.div 
@@ -495,13 +500,6 @@ const Browse = () => {
                           <Info size={32} style={{ marginBottom: '0.5rem', opacity: 0.5 }} />
                           <p>Image not available</p>
                         </div>
-                        {currentUser?.uid === selectedReport.userId && (
-                          <div style={{ position: 'absolute', top: '1rem', right: '1rem', display: 'flex', gap: '0.5rem' }}>
-                            <button onClick={() => handleDeleteReport(selectedReport.id)} className="btn btn-danger btn-sm" style={{ borderRadius: '50%', width: '36px', height: '36px', padding: 0, backgroundColor: 'var(--clr-error)' }}>
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        )}
                       </div>
                     )}
                     {/* Debug Info for User/Agent */}
@@ -515,6 +513,11 @@ const Browse = () => {
                         {selectedReport.status}
                       </span>
                       <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        {currentUser?.uid === selectedReport.userId && (
+                          <button onClick={() => handleDeleteReport(selectedReport.id)} className="btn btn-ghost btn-sm" title="Delete Report" style={{ color: 'var(--clr-error)' }}>
+                            <Trash size={18} />
+                          </button>
+                        )}
                         <button onClick={() => shareReport('whatsapp')} className="btn btn-ghost btn-sm" title="Share WhatsApp"><Share2 size={18} /></button>
                         <button onClick={() => shareReport('copy')} className="btn btn-ghost btn-sm" title="Copy Link"><Copy size={18} /></button>
                       </div>

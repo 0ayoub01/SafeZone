@@ -1,4 +1,6 @@
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import Home from './pages/Home';
@@ -56,6 +58,7 @@ function App() {
           <Footer />
         </div>
       </Router>
+      <ToastContainer position="bottom-right" theme="dark" />
     </AuthProvider>
   );
 }

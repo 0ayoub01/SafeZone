@@ -5,6 +5,8 @@ import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+// Ensure L is global for leaflet.heat
+window.L = L;
 import 'leaflet.heat';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -139,7 +141,7 @@ const MapView = () => {
               <HeatmapLayer points={heatmapPoints} />
             ) : (
               filteredReports.map(report => (
-                report.location?.lat && (
+                (report.location?.lat && report.location?.lng) && (
                   <Marker key={report.id} position={[report.location.lat, report.location.lng]}>
                     <Popup className="premium-popup">
                       <div style={{ padding: '0.25rem', minWidth: '220px' }}>

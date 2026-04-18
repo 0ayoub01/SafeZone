@@ -49,14 +49,28 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
+    console.log("AuthContext: Setting up onAuthStateChanged");
+    if (!auth) {
+      console.error("AuthContext: Firebase Auth not initialized!");
+      setLoading(false);
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log("AuthContext: Auth state changed", user ? user.uid : 'No user');
       setCurrentUser(user);
       setError(null); // Clear any previous errors on auth state change
       if (user) {
         try {
+          if (!db) {
+            console.error("AuthContext: Firestore DB not initialized!");
+            setUserRole('user');
+            setLoading(false);
+            return;
+          }
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists()) {
             const data = userDoc.data();
+            console.log("AuthContext: User data loaded", data.role);
             if (data.disabled) {
               await signOut(auth);
               setCurrentUser(null);

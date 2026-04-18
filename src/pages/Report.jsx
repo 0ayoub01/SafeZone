@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 // Removed Firebase Storage since the project is on the free plan
 import { db, storage } from '../firebase';
@@ -261,6 +262,7 @@ const Report = () => {
       console.log("Saving report to Firestore:", reportData);
       await addDoc(collection(db, 'reports'), reportData);
 
+      toast.success("Report added successfully");
       navigate('/browse');
     } catch (err) {
       console.error(err);
