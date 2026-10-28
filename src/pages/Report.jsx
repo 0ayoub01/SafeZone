@@ -1,3 +1,7 @@
+/**
+ * Incident Reporting Page
+ * Allows authenticated users to submit new safety incidents with images and locations.
+ */
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';

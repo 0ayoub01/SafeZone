@@ -1,3 +1,7 @@
+/**
+ * Interactive Incident Map
+ * Visualizes incidents across Tunisia using heatmaps and markers.
+ */
 import { useState, useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { Link } from 'react-router-dom';

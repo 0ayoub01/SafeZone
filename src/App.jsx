@@ -1,8 +1,16 @@
+/**
+ * SafeZone Application Root
+ * Handles routing, authentication provider wrapping, and global notifications.
+ */
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+
+// Layout Components
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
+
+// Page Components
 import Home from './pages/Home';
 import Browse from './pages/Browse';
 import Report from './pages/Report';
@@ -13,13 +21,21 @@ import Moderator from './pages/Moderator';
 import About from './pages/About';
 import Login from './pages/Login';
 import Emergency from './pages/Emergency';
+
+// Context Providers
 import { AuthProvider, useAuth } from './context/AuthContext';
 
+/**
+ * Higher-Order Component to protect routes that require authentication.
+ */
 const ProtectedRoute = ({ children }) => {
   const { currentUser } = useAuth();
   return currentUser ? children : <Navigate to="/login" />;
 };
 
+/**
+ * Higher-Order Component to protect routes that require Admin privileges.
+ */
 const AdminRoute = ({ children }) => {
   const { currentUser, isAdmin } = useAuth();
   if (!currentUser) return <Navigate to="/login" />;
@@ -27,6 +43,9 @@ const AdminRoute = ({ children }) => {
   return children;
 };
 
+/**
+ * Higher-Order Component to protect routes that require Moderator privileges.
+ */
 const ModeratorRoute = ({ children }) => {
   const { currentUser, canModerate } = useAuth();
   if (!currentUser) return <Navigate to="/login" />;

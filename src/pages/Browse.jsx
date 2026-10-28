@@ -1,3 +1,7 @@
+/**
+ * Incident Browsing Page
+ * Displays a searchable and filterable list of all reported incidents.
+ */
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';

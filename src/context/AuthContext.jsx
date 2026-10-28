@@ -1,3 +1,8 @@
+/**
+ * Authentication Context Provider
+ * Manages user session, profiles, and role-based access control (RBAC).
+ * Integrates with Firebase Auth and Firestore.
+ */
 import { createContext, useContext, useEffect, useState } from 'react';
 import {
   createUserWithEmailAndPassword,
@@ -12,6 +17,9 @@ import { auth, db } from '../firebase';
 
 const AuthContext = createContext();
 
+/**
+ * Custom hook to consume the AuthContext.
+ */
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
@@ -21,6 +29,9 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  /**
+   * Registers a new user and creates their profile in Firestore.
+   */
   const signup = async (email, password, fullName, phone, city, photoURL) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     await setDoc(doc(db, 'users', userCredential.user.uid), {
@@ -35,15 +46,24 @@ export const AuthProvider = ({ children }) => {
     return userCredential;
   };
 
+  /**
+   * Logs in an existing user with email and password.
+   */
   const login = (email, password) => {
     return signInWithEmailAndPassword(auth, email, password);
   };
 
+  /**
+   * OAuth login using GitHub.
+   */
   const loginWithGithub = () => {
     const provider = new GithubAuthProvider();
     return signInWithPopup(auth, provider);
   };
 
+  /**
+   * Terminates the current session.
+   */
   const logout = () => {
     return signOut(auth);
   };
